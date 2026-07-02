@@ -1,0 +1,71 @@
+name: manbar_almasjid
+description: "Manbar AlMasjid – Imam App for mosque management, prayer times, and community posts."
+publish_to: "none"
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.4.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # ── Firebase ─────────────────────────────────────────────────
+  firebase_core: ^4.11.0
+  firebase_auth: ^6.5.4
+  cloud_firestore: ^6.6.0
+  firebase_storage: ^13.4.3
+  firebase_messaging: ^16.4.1
+
+  # ── Google Sign-In & Apple Sign-In ───────────────────────────
+  google_sign_in: ^6.2.1
+  sign_in_with_apple: ^6.1.1
+
+  # ── State Management ─────────────────────────────────────────
+  flutter_riverpod: ^3.1.0
+  riverpod_annotation: ^4.0.0
+
+  # ── Navigation ───────────────────────────────────────────────
+  go_router: ^17.3.0
+
+  # ── Fonts & UI ───────────────────────────────────────────────
+  google_fonts: ^8.1.0
+  intl: ^0.20.2
+
+  # ── Utilities ────────────────────────────────────────────────
+  shared_preferences: ^2.3.2
+  lottie: ^3.1.2
+  flutter_svg: ^2.0.10+1
+  crypto: ^3.0.3
+
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.12
+  riverpod_generator: ^4.0.0+1
+  custom_lint: ^0.8.1
+  riverpod_lint: ^3.1.0
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+
+  assets:
+    - assets/images/
+    - assets/animations/
+
+  fonts:
+    - family: Tajawal
+      fonts:
+        - asset: assets/fonts/Tajawal-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Tajawal-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Tajawal-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Tajawal-ExtraBold.ttf
+          weight: 800

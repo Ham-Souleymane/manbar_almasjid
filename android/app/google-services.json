@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "934105443254",
+    "project_id": "dinapp-3eadd",
+    "storage_bucket": "dinapp-3eadd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:934105443254:android:a027add3d694074b6eef17",
+        "android_client_info": {
+          "package_name": "com.manbar.manbarAlmasjid"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "934105443254-8r7ua5cdm4acice7gh0cj4f1lbjp9gdc.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.manbar.manbarAlmasjid",
+            "certificate_hash": "ff7d2b615f37bdf9e9346f03c23f6a11ac36e058"
+          }
+        },
+        {
+          "client_id": "934105443254-o2sdu3n2avnn6ciqjpoadmiq2rmdidfd.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCop8-t-igl8MT3w3OQjIV2LmqDhZvYlMQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "934105443254-o2sdu3n2avnn6ciqjpoadmiq2rmdidfd.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "934105443254-lnpkt926q2gloa0hdqne676vcc3bkpqf.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.manbar.manbarAlmasjid"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
