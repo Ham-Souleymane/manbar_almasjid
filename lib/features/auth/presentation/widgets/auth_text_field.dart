@@ -18,6 +18,7 @@ class AuthTextField extends StatefulWidget {
     this.onFieldSubmitted,
     this.autofillHints,
     this.focusNode,
+    this.readOnly = false,
   });
 
   final String label;
@@ -31,6 +32,7 @@ class AuthTextField extends StatefulWidget {
   final void Function(String)? onFieldSubmitted;
   final Iterable<String>? autofillHints;
   final FocusNode? focusNode;
+  final bool readOnly;
 
   @override
   State<AuthTextField> createState() => _AuthTextFieldState();
@@ -47,6 +49,7 @@ class _AuthTextFieldState extends State<AuthTextField> {
       keyboardType: widget.keyboardType,
       textInputAction: widget.textInputAction,
       obscureText: widget.isPassword && _obscureText,
+      readOnly: widget.readOnly,
       textDirection: TextDirection.ltr,
       textAlign: TextAlign.right,
       autofillHints: widget.autofillHints,

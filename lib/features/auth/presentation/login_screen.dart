@@ -4,11 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/extensions.dart';
-import '../../../core/router/app_router.dart';
 import '../application/auth_controller.dart';
 import '../application/auth_state.dart';
+import '../../registration/application/registration_controller.dart';
 import 'widgets/apple_sign_in_button.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/google_sign_in_button.dart';
@@ -93,10 +94,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         password: _passwordController.text,
       );
     } else {
-      await controller.createUserWithEmailAndPassword(
-        email: _emailController.text,
-        password: _passwordController.text,
-      );
+      ref.read(registrationControllerProvider.notifier).setImamStep(
+            fullName: '',
+            phone: '',
+            email: _emailController.text.trim(),
+          );
+      if (mounted) context.go(AppRoutes.registerImam);
+      return;
     }
 
     if (!mounted) return;
@@ -131,10 +135,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.isLoading;
 
-    // Navigate away once authenticated
     ref.listen<AuthState>(authControllerProvider, (_, next) {
-      if (next.isAuthenticated) {
-        context.go(AppRoutes.home);
+      if (next.hasError) {
+        context.showSnackBar(next.errorMessage ?? 'حدث خطأ', isError: true);
       }
     });
 
@@ -275,49 +278,36 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             ),
             const SizedBox(height: 16),
 
-            // Password
-            AuthTextField(
-              label: 'كلمة المرور',
-              hint: '••••••••',
-              controller: _passwordController,
-              focusNode: _passwordFocusNode,
-              prefixIcon: Icons.lock_outline_rounded,
-              isPassword: true,
-              textInputAction: _mode == _AuthMode.login
-                  ? TextInputAction.done
-                  : TextInputAction.next,
-              autofillHints: const [AutofillHints.password],
-              validator: (v) {
-                if (v == null || v.isEmpty) return 'أدخل كلمة المرور';
-                if (v.length < 6) return 'يجب أن تكون 6 أحرف على الأقل';
-                return null;
-              },
-              onFieldSubmitted: (_) {
-                if (_mode == _AuthMode.login) {
-                  _submit();
-                } else {
-                  FocusScope.of(context).requestFocus(_confirmFocusNode);
-                }
-              },
-            ),
-
-            // Confirm Password (register only)
-            if (_mode == _AuthMode.register) ...[
-              const SizedBox(height: 16),
+            // Password (login only — registration continues on step 1)
+            if (_mode == _AuthMode.login)
               AuthTextField(
-                label: 'تأكيد كلمة المرور',
+                label: 'كلمة المرور',
                 hint: '••••••••',
-                controller: _confirmPasswordController,
-                focusNode: _confirmFocusNode,
+                controller: _passwordController,
+                focusNode: _passwordFocusNode,
                 prefixIcon: Icons.lock_outline_rounded,
                 isPassword: true,
                 textInputAction: TextInputAction.done,
+                autofillHints: const [AutofillHints.password],
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'أكّد كلمة المرور';
-                  if (v != _passwordController.text) return 'كلمتا المرور غير متطابقتين';
+                  if (v == null || v.isEmpty) return 'أدخل كلمة المرور';
+                  if (v.length < 6) return 'يجب أن تكون 6 أحرف على الأقل';
                   return null;
                 },
                 onFieldSubmitted: (_) => _submit(),
+              ),
+
+            // Confirm Password (register only — kept for email prefill flow)
+            if (_mode == _AuthMode.register) ...[
+              const SizedBox(height: 8),
+              Text(
+                'سيتم إكمال التسجيل في الخطوة التالية',
+                style: GoogleFonts.tajawal(
+                  fontSize: 13,
+                  color: AppColors.grey500,
+                ),
+                textDirection: TextDirection.rtl,
+                textAlign: TextAlign.center,
               ),
             ],
 
@@ -349,7 +339,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
             // Primary CTA
             _PrimaryButton(
-              label: _mode == _AuthMode.login ? 'تسجيل الدخول' : 'إنشاء الحساب',
+              label: _mode == _AuthMode.login ? 'تسجيل الدخول' : 'التالي',
               isLoading: isLoading,
               onPressed: _submit,
             ),
@@ -411,7 +401,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         ),
         const SizedBox(width: 4),
         GestureDetector(
-          onTap: _toggleMode,
+          onTap: () {
+            if (_mode == _AuthMode.login) {
+              context.go(AppRoutes.registerImam);
+            } else {
+              _toggleMode();
+            }
+          },
           child: Text(
             _mode == _AuthMode.login ? 'أنشئ حساباً' : 'تسجيل الدخول',
             style: GoogleFonts.tajawal(

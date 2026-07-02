@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-import '../../../core/providers/firebase_providers.dart';
-import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// Splash screen that checks authentication state and auto-routes.
@@ -48,28 +45,9 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   }
 
   Future<void> _checkAuthAndNavigate() async {
-    // Wait for the animation to finish and a short delay to display the brand identity
     await Future.delayed(const Duration(milliseconds: 2000));
     if (!mounted) return;
-
-    final authState = ref.read(authStateChangesProvider);
-
-    authState.when(
-      data: (user) {
-        if (user != null) {
-          context.go(AppRoutes.home);
-        } else {
-          context.go(AppRoutes.login);
-        }
-      },
-      error: (_, __) {
-        // Fallback to login in case of error
-        context.go(AppRoutes.login);
-      },
-      loading: () {
-        // If still loading, wait for redirect logic in GoRouter to handle it
-      },
-    );
+    // Router redirect logic handles navigation based on auth + imam profile.
   }
 
   @override
