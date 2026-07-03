@@ -71,7 +71,7 @@ class RegistrationRepository {
       phone: phone,
       email: email,
       photo: verificationDocumentUrl,
-      status: ImamStatus.pending,
+      status: ImamStatus.verified,
       mosqueId: mosqueRef.id,
       createdAt: now,
     );

@@ -10,6 +10,7 @@ import '../../features/registration/domain/imam_status.dart';
 import '../../features/registration/presentation/imam_registration_screen.dart';
 import '../../features/registration/presentation/mosque_registration_screen.dart';
 import '../../features/registration/presentation/under_review_screen.dart';
+import '../../features/mosque/presentation/home_dashboard_screen.dart';
 
 // ── Route names ───────────────────────────────────────────────
 abstract class AppRoutes {
@@ -115,26 +116,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         name: 'home',
-        builder: (context, state) => const _PlaceholderHomeScreen(),
+        builder: (context, state) => const HomeDashboardScreen(),
       ),
     ],
   );
 });
-
-// ── Temporary home placeholder ────────────────────────────────
-class _PlaceholderHomeScreen extends StatelessWidget {
-  const _PlaceholderHomeScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('الرئيسية')),
-      body: const Center(
-        child: Text(
-          'مرحباً بك في منبر المسجد',
-          style: TextStyle(fontSize: 20),
-        ),
-      ),
-    );
-  }
-}

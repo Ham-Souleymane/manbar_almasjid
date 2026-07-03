@@ -1,0 +1,58 @@
+class MosqueModel {
+  final String id;
+  final String name;
+  final String imamName;
+  final String imamPhone;
+  final String description;
+  final String city;
+  final String address;
+  final String logoUrl;
+  final String coverUrl;
+  final bool isVerified;
+  final String imamStatus; // "pending" | "approved" | "rejected"
+
+  MosqueModel({
+    required this.id,
+    required this.name,
+    required this.imamName,
+    required this.imamPhone,
+    required this.description,
+    required this.city,
+    required this.address,
+    required this.logoUrl,
+    required this.coverUrl,
+    required this.isVerified,
+    required this.imamStatus,
+  });
+
+  factory MosqueModel.fromMap(String id, Map<String, dynamic> data) {
+    return MosqueModel(
+      id: id,
+      name: data['name'] ?? '',
+      imamName: data['imamName'] ?? '',
+      imamPhone: data['imamPhone'] ?? '',
+      description: data['description'] ?? '',
+      city: data['city'] ?? '',
+      address: data['address'] ?? '',
+      logoUrl: data['logoUrl'] ?? '',
+      coverUrl: data['coverUrl'] ?? '',
+      isVerified: data['isVerified'] ?? false,
+      imamStatus: data['imamStatus'] ?? 'pending',
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'name': name,
+      'imamName': imamName,
+      'imamPhone': imamPhone,
+      'description': description,
+      'city': city,
+      'address': address,
+      'logoUrl': logoUrl,
+      'coverUrl': coverUrl,
+      'isVerified': isVerified,
+      'imamStatus': imamStatus,
+    };
+  }
+}
