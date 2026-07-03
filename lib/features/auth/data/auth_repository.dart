@@ -39,9 +39,16 @@ class AuthRepository implements IAuthRepository {
 
   final FirebaseAuth _auth;
 
-  final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: ['email', 'profile'],
-  );
+  // google_sign_in v7: use the singleton, not a constructor
+  final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
+  bool _googleSignInInitialized = false;
+
+  /// Initializes google_sign_in exactly once.
+  Future<void> _ensureGoogleInitialized() async {
+    if (_googleSignInInitialized) return;
+    await _googleSignIn.initialize();
+    _googleSignInInitialized = true;
+  }
 
   @override
   User? get currentUser => _auth.currentUser;
@@ -75,21 +82,35 @@ class AuthRepository implements IAuthRepository {
   // ── Google Sign-In ───────────────────────────────────────────
   @override
   Future<UserCredential?> signInWithGoogle() async {
-    // Trigger the authentication flow
-    final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
-    if (googleUser == null) return null; // user cancelled
+    await _ensureGoogleInitialized();
 
-    // Obtain the auth details
-    final GoogleSignInAuthentication googleAuth =
-        await googleUser.authentication;
+    try {
+      // v7 API: authenticate() replaces the old signIn()
+      final GoogleSignInAccount googleUser =
+          await _googleSignIn.authenticate();
 
-    // Create a new credential
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
+      // v7 API: authentication is a synchronous getter, not a Future
+      final GoogleSignInAuthentication googleAuth =
+          googleUser.authentication;
 
-    return _auth.signInWithCredential(credential);
+      // v7 API: accessToken is no longer on GoogleSignInAuthentication;
+      // Firebase only requires idToken for sign-in.
+      final credential = GoogleAuthProvider.credential(
+        idToken: googleAuth.idToken,
+      );
+
+      return _auth.signInWithCredential(credential);
+    } on GoogleSignInException catch (e) {
+      debugPrint('GoogleSignInException caught: code=${e.code}, description=${e.description}');
+      // User tapped "Cancel" — treat as a silent no-op.
+      if (e.code == GoogleSignInExceptionCode.canceled) {
+        return null;
+      }
+      rethrow;
+    } catch (e, stack) {
+      debugPrint('Unexpected error in signInWithGoogle: $e\n$stack');
+      rethrow;
+    }
   }
 
   // ── Apple Sign-In ────────────────────────────────────────────
@@ -102,7 +123,8 @@ class AuthRepository implements IAuthRepository {
     if (kIsWeb || defaultTargetPlatform == TargetPlatform.android) {
       webOptions = WebAuthenticationOptions(
         clientId: 'com.manbar.manbarAlmasjid.service',
-        redirectUri: Uri.parse('https://dinapp-3eadd.firebaseapp.com/__/auth/handler'),
+        redirectUri: Uri.parse(
+            'https://dinapp-3eadd.firebaseapp.com/__/auth/handler'),
       );
     }
 
@@ -124,9 +146,11 @@ class AuthRepository implements IAuthRepository {
   }
 
   String _generateNonce([int length = 32]) {
-    final charset = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_';
+    const charset =
+        '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.-_';
     final random = Random.secure();
-    return List.generate(length, (_) => charset[random.nextInt(charset.length)]).join();
+    return List.generate(
+        length, (_) => charset[random.nextInt(charset.length)]).join();
   }
 
   String _sha256ofString(String input) {
@@ -138,6 +162,7 @@ class AuthRepository implements IAuthRepository {
   // ── Sign Out ──────────────────────────────────────────────────
   @override
   Future<void> signOut() async {
+    await _ensureGoogleInitialized();
     await Future.wait([
       _auth.signOut(),
       _googleSignIn.signOut(),

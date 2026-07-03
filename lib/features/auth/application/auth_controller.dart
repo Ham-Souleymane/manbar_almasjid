@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers/firebase_providers.dart';
@@ -135,14 +136,16 @@ class AuthController extends Notifier<AuthState> {
         user: credential.user,
       );
     } on FirebaseAuthException catch (e) {
+      debugPrint('FirebaseAuthException in signInWithGoogle: code=${e.code}, message=${e.message}');
       state = AuthState(
         status: AuthStatus.error,
         errorMessage: _mapFirebaseError(e),
       );
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('Unexpected error in AuthController.signInWithGoogle: $e\n$stack');
       state = AuthState(
         status: AuthStatus.error,
-        errorMessage: 'فشل تسجيل الدخول عبر Google.',
+        errorMessage: 'فشل تسجيل الدخول عبر Google. ($e)',
       );
     }
   }

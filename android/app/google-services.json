@@ -14,11 +14,11 @@
       },
       "oauth_client": [
         {
-          "client_id": "934105443254-8r7ua5cdm4acice7gh0cj4f1lbjp9gdc.apps.googleusercontent.com",
+          "client_id": "934105443254-21vofv8c3tpelllao280qrq5e2hg3obr.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
             "package_name": "com.manbar.manbarAlmasjid",
-            "certificate_hash": "ff7d2b615f37bdf9e9346f03c23f6a11ac36e058"
+            "certificate_hash": "7e8f430dfe43d3081a7209f3f676f322993681ca"
           }
         },
         {

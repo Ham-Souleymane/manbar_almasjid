@@ -32,7 +32,6 @@ class _MosqueRegistrationScreenState
   final _nameController = TextEditingController();
   final _cityController = TextEditingController();
   final _addressController = TextEditingController();
-  final _capacityController = TextEditingController();
   final _contactController = TextEditingController();
 
   String _country = '';
@@ -50,9 +49,6 @@ class _MosqueRegistrationScreenState
     _contactController.text = regState.contactPhone;
     _country = regState.country;
     _countryCode = regState.countryCode;
-    if (regState.capacity != null) {
-      _capacityController.text = regState.capacity.toString();
-    }
   }
 
   @override
@@ -60,7 +56,6 @@ class _MosqueRegistrationScreenState
     _nameController.dispose();
     _cityController.dispose();
     _addressController.dispose();
-    _capacityController.dispose();
     _contactController.dispose();
     super.dispose();
   }
@@ -117,7 +112,7 @@ class _MosqueRegistrationScreenState
           address: _addressController.text.trim(),
           mosquePhoto: _mosquePhoto,
           contactPhone: _contactController.text.trim(),
-          capacity: int.tryParse(_capacityController.text.trim()),
+          capacity: null,
         );
 
     final success = await ref
@@ -221,18 +216,6 @@ class _MosqueRegistrationScreenState
                     onFileSelected: (file) => setState(() => _mosquePhoto = file),
                   ),
                   const SizedBox(height: 16),
-                  AuthTextField(
-                    label: 'السعة (عدد المصلين)',
-                    hint: '500',
-                    controller: _capacityController,
-                    prefixIcon: Icons.groups_outlined,
-                    keyboardType: TextInputType.number,
-                    validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'أدخل السعة';
-                      if (int.tryParse(v.trim()) == null) return 'أدخل رقماً صحيحاً';
-                      return null;
-                    },
-                  ),
                   const SizedBox(height: 16),
                   AuthTextField(
                     label: 'رقم التواصل',
