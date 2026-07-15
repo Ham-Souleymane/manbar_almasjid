@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/l10n/app_localizations.dart';
+import '../../../core/providers/locale_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/extensions.dart';
@@ -106,7 +108,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (!mounted) return;
     final state = ref.read(authControllerProvider);
     if (state.hasError) {
-      context.showSnackBar(state.errorMessage ?? 'حدث خطأ', isError: true);
+      context.showSnackBar(
+        state.errorMessage ?? context.l10n.anErrorOccurred,
+        isError: true,
+      );
     }
   }
 
@@ -116,7 +121,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (!mounted) return;
     final state = ref.read(authControllerProvider);
     if (state.hasError) {
-      context.showSnackBar(state.errorMessage ?? 'فشل تسجيل الدخول عبر Google', isError: true);
+      context.showSnackBar(
+        state.errorMessage ?? context.l10n.failedGoogleLogin,
+        isError: true,
+      );
     }
   }
 
@@ -126,7 +134,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
     if (!mounted) return;
     final state = ref.read(authControllerProvider);
     if (state.hasError) {
-      context.showSnackBar(state.errorMessage ?? 'فشل تسجيل الدخول عبر Apple', isError: true);
+      context.showSnackBar(
+        state.errorMessage ?? context.l10n.failedAppleLogin,
+        isError: true,
+      );
     }
   }
 
@@ -134,10 +145,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   Widget build(BuildContext context) {
     final authState = ref.watch(authControllerProvider);
     final isLoading = authState.isLoading;
+    final l10n = context.l10n;
 
     ref.listen<AuthState>(authControllerProvider, (_, next) {
       if (next.hasError) {
-        context.showSnackBar(next.errorMessage ?? 'حدث خطأ', isError: true);
+        context.showSnackBar(next.errorMessage ?? l10n.anErrorOccurred, isError: true);
       }
     });
 
@@ -160,14 +172,34 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      const SizedBox(height: 32),
-                      _buildHeader(),
+                      const SizedBox(height: 12),
+                      Align(
+                        alignment: AlignmentDirectional.topEnd,
+                        child: TextButton.icon(
+                          onPressed: () {
+                            final isArabic = ref.read(localeProvider).languageCode == 'ar';
+                            ref.read(localeProvider.notifier).setLocale(
+                              isArabic ? const Locale('en', 'US') : const Locale('ar', 'AE'),
+                            );
+                          },
+                          icon: const Icon(Icons.language_rounded, color: AppColors.emeraldDark, size: 18),
+                          label: Text(
+                            ref.watch(localeProvider).languageCode == 'ar' ? 'English' : 'العربية',
+                            style: GoogleFonts.tajawal(
+                              fontWeight: FontWeight.bold,
+                              color: AppColors.emeraldDark,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      _buildHeader(l10n),
                       const SizedBox(height: 36),
-                      _buildCard(isLoading),
+                      _buildCard(isLoading, l10n),
                       const SizedBox(height: 24),
-                      _buildToggleModeButton(),
+                      _buildToggleModeButton(l10n),
                       const Spacer(),
-                      _buildFooter(),
+                      _buildFooter(l10n),
                       const SizedBox(height: 24),
                     ],
                   ),
@@ -181,7 +213,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   // ── Header ────────────────────────────────────────────────
-  Widget _buildHeader() {
+  Widget _buildHeader(AppLocalizations l10n) {
     return Column(
       children: [
         // Mosque icon in gold circle
@@ -211,26 +243,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         ),
         const SizedBox(height: 20),
         Text(
-          'منبر المسجد',
+          l10n.appName,
           style: GoogleFonts.tajawal(
             fontSize: 30,
             fontWeight: FontWeight.w800,
             color: AppColors.emeraldDark,
             height: 1.2,
           ),
-          textDirection: TextDirection.rtl,
         ),
         const SizedBox(height: 8),
         Text(
-          _mode == _AuthMode.login
-              ? 'أهلاً بعودتك — سجّل دخولك للمتابعة'
-              : 'أنشئ حسابك الجديد',
+          _mode == _AuthMode.login ? l10n.loginSubtitle : l10n.registerSubtitle,
           style: GoogleFonts.tajawal(
             fontSize: 14,
             fontWeight: FontWeight.w400,
             color: AppColors.grey500,
           ),
-          textDirection: TextDirection.rtl,
           textAlign: TextAlign.center,
         ),
       ],
@@ -238,7 +266,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   // ── Card ──────────────────────────────────────────────────
-  Widget _buildCard(bool isLoading) {
+  Widget _buildCard(bool isLoading, AppLocalizations l10n) {
     return Container(
       decoration: BoxDecoration(
         color: AppColors.surface,
@@ -260,8 +288,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
           children: [
             // Email
             AuthTextField(
-              label: 'البريد الإلكتروني',
-              hint: 'imam@masjid.com',
+              label: l10n.email,
+              hint: l10n.emailHint,
               controller: _emailController,
               focusNode: _emailFocusNode,
               prefixIcon: Icons.email_outlined,
@@ -269,8 +297,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.email],
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'أدخل البريد الإلكتروني';
-                if (!v.trim().isValidEmail) return 'البريد الإلكتروني غير صالح';
+                if (v == null || v.trim().isEmpty) return l10n.enterEmail;
+                if (!v.trim().isValidEmail) return l10n.invalidEmail;
                 return null;
               },
               onFieldSubmitted: (_) =>
@@ -281,8 +309,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             // Password (login only — registration continues on step 1)
             if (_mode == _AuthMode.login)
               AuthTextField(
-                label: 'كلمة المرور',
-                hint: '••••••••',
+                label: l10n.password,
+                hint: l10n.passwordHint,
                 controller: _passwordController,
                 focusNode: _passwordFocusNode,
                 prefixIcon: Icons.lock_outline_rounded,
@@ -290,23 +318,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 textInputAction: TextInputAction.done,
                 autofillHints: const [AutofillHints.password],
                 validator: (v) {
-                  if (v == null || v.isEmpty) return 'أدخل كلمة المرور';
-                  if (v.length < 6) return 'يجب أن تكون 6 أحرف على الأقل';
+                  if (v == null || v.isEmpty) return l10n.enterPassword;
+                  if (v.length < 6) return l10n.passwordMinLength;
                   return null;
                 },
                 onFieldSubmitted: (_) => _submit(),
               ),
 
-            // Confirm Password (register only — kept for email prefill flow)
+            // Continue note (register only)
             if (_mode == _AuthMode.register) ...[
               const SizedBox(height: 8),
               Text(
-                'سيتم إكمال التسجيل في الخطوة التالية',
+                l10n.registrationContinueNote,
                 style: GoogleFonts.tajawal(
                   fontSize: 13,
                   color: AppColors.grey500,
                 ),
-                textDirection: TextDirection.rtl,
                 textAlign: TextAlign.center,
               ),
             ],
@@ -324,7 +351,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                   child: Text(
-                    'نسيت كلمة المرور؟',
+                    l10n.forgotPassword,
                     style: GoogleFonts.tajawal(
                       fontSize: 13,
                       fontWeight: FontWeight.w500,
@@ -339,7 +366,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
 
             // Primary CTA
             _PrimaryButton(
-              label: _mode == _AuthMode.login ? 'تسجيل الدخول' : 'التالي',
+              label: _mode == _AuthMode.login ? l10n.login : l10n.next,
               isLoading: isLoading,
               onPressed: _submit,
             ),
@@ -353,7 +380,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    'أو',
+                    l10n.orDivider,
                     style: GoogleFonts.tajawal(
                       fontSize: 13,
                       color: AppColors.grey500,
@@ -386,14 +413,12 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   // ── Toggle Mode ───────────────────────────────────────────
-  Widget _buildToggleModeButton() {
+  Widget _buildToggleModeButton(AppLocalizations l10n) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          _mode == _AuthMode.login
-              ? 'ليس لديك حساب؟'
-              : 'لديك حساب بالفعل؟',
+          _mode == _AuthMode.login ? l10n.noAccount : l10n.hasAccount,
           style: GoogleFonts.tajawal(
             fontSize: 14,
             color: AppColors.grey500,
@@ -409,7 +434,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             }
           },
           child: Text(
-            _mode == _AuthMode.login ? 'أنشئ حساباً' : 'تسجيل الدخول',
+            _mode == _AuthMode.login ? l10n.registerCta : l10n.loginCta,
             style: GoogleFonts.tajawal(
               fontSize: 14,
               fontWeight: FontWeight.w700,
@@ -424,16 +449,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   // ── Footer ────────────────────────────────────────────────
-  Widget _buildFooter() {
+  Widget _buildFooter(AppLocalizations l10n) {
     return Text(
-      '© 2025 منبر المسجد – جميع الحقوق محفوظة',
+      l10n.copyright,
       style: GoogleFonts.tajawal(
         fontSize: 11,
         color: AppColors.grey300,
         fontWeight: FontWeight.w400,
       ),
       textAlign: TextAlign.center,
-      textDirection: TextDirection.rtl,
     );
   }
 
@@ -452,7 +476,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
               .read(authControllerProvider.notifier)
               .sendPasswordResetEmail(email);
           if (!mounted) return;
-          context.showSnackBar('تم إرسال رابط إعادة تعيين كلمة المرور إلى $email');
+          context.showSnackBar('${context.l10n.resetLinkSent} $email');
         },
       ),
     );
@@ -545,6 +569,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     return Container(
       padding: EdgeInsets.only(
         left: 24,
@@ -575,37 +600,35 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
             ),
             const SizedBox(height: 24),
             Text(
-              'إعادة تعيين كلمة المرور',
+              l10n.forgotPasswordTitle,
               style: GoogleFonts.tajawal(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
                 color: AppColors.emeraldDark,
               ),
-              textDirection: TextDirection.rtl,
             ),
             const SizedBox(height: 8),
             Text(
-              'أدخل بريدك الإلكتروني وسنرسل لك رابط إعادة التعيين.',
+              l10n.forgotPasswordSubtitle,
               style: GoogleFonts.tajawal(
                 fontSize: 14,
                 color: AppColors.grey500,
               ),
-              textDirection: TextDirection.rtl,
             ),
             const SizedBox(height: 24),
             TextFormField(
               controller: widget.emailController,
               keyboardType: TextInputType.emailAddress,
               textDirection: TextDirection.ltr,
-              textAlign: TextAlign.right,
+              textAlign: TextAlign.left,
               autofillHints: const [AutofillHints.email],
-              decoration: const InputDecoration(
-                labelText: 'البريد الإلكتروني',
-                prefixIcon: Icon(Icons.email_outlined, size: 20),
+              decoration: InputDecoration(
+                labelText: l10n.email,
+                prefixIcon: const Icon(Icons.email_outlined, size: 20),
               ),
               validator: (v) {
-                if (v == null || v.trim().isEmpty) return 'أدخل البريد الإلكتروني';
-                if (!v.trim().isValidEmail) return 'البريد الإلكتروني غير صالح';
+                if (v == null || v.trim().isEmpty) return l10n.enterEmail;
+                if (!v.trim().isValidEmail) return l10n.invalidEmail;
                 return null;
               },
             ),
@@ -616,7 +639,7 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                   widget.onSend(widget.emailController.text.trim());
                 }
               },
-              child: const Text('إرسال'),
+              child: Text(l10n.send),
             ),
           ],
         ),

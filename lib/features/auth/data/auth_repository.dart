@@ -43,10 +43,17 @@ class AuthRepository implements IAuthRepository {
   final GoogleSignIn _googleSignIn = GoogleSignIn.instance;
   bool _googleSignInInitialized = false;
 
+  // Web Client ID (client_type: 3) from google-services.json.
+  // Required on Android for Google Sign-In to work.
+  static const _webClientId =
+      '934105443254-o2sdu3n2avnn6ciqjpoadmiq2rmdidfd.apps.googleusercontent.com';
+
   /// Initializes google_sign_in exactly once.
   Future<void> _ensureGoogleInitialized() async {
     if (_googleSignInInitialized) return;
-    await _googleSignIn.initialize();
+    await _googleSignIn.initialize(
+      serverClientId: _webClientId,
+    );
     _googleSignInInitialized = true;
   }
 
@@ -83,7 +90,6 @@ class AuthRepository implements IAuthRepository {
   @override
   Future<UserCredential?> signInWithGoogle() async {
     await _ensureGoogleInitialized();
-
     try {
       // v7 API: authenticate() replaces the old signIn()
       final GoogleSignInAccount googleUser =

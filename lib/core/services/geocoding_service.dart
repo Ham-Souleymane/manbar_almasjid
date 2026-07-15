@@ -16,7 +16,7 @@ class GeocodingResult {
 class GeocodingService {
   Future<GeocodingResult> reverseGeocode(LatLng location) async {
     try {
-      final placemarks = await placemarkFromCoordinates(
+      final placemarks = await Geocoding().placemarkFromCoordinates(
         location.latitude,
         location.longitude,
       );

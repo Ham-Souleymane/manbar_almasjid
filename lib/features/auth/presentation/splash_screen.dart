@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
 
 /// Splash screen that checks authentication state and auto-routes.
@@ -92,7 +93,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               const SizedBox(height: 24),
               // App Title
               Text(
-                'منبر المسجد',
+                context.l10n.appName,
                 style: GoogleFonts.tajawal(
                   fontSize: 32,
                   fontWeight: FontWeight.w800,
@@ -103,7 +104,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               const SizedBox(height: 8),
               // Subtitle
               Text(
-                'تطبيق الإمام والمؤذن للمسجد',
+                context.l10n.splashTagline,
                 style: GoogleFonts.tajawal(
                   fontSize: 15,
                   fontWeight: FontWeight.w400,

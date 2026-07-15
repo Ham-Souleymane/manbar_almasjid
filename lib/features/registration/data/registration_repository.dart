@@ -1,8 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import 'package:http/http.dart' as http;
 
 import '../../../core/providers/firebase_providers.dart';
 import '../domain/imam_model.dart';
@@ -12,12 +14,9 @@ import '../domain/mosque_model.dart';
 class RegistrationRepository {
   RegistrationRepository({
     required FirebaseFirestore firestore,
-    required FirebaseStorage storage,
-  })  : _firestore = firestore,
-        _storage = storage;
+  })  : _firestore = firestore;
 
   final FirebaseFirestore _firestore;
-  final FirebaseStorage _storage;
 
   CollectionReference<Map<String, dynamic>> get _imams =>
       _firestore.collection('imams');
@@ -32,20 +31,60 @@ class RegistrationRepository {
     });
   }
 
+  Stream<MosqueModel?> watchMosque(String mosqueId) {
+    return _mosques.doc(mosqueId).snapshots().map((doc) {
+      if (!doc.exists) return null;
+      return MosqueModel.fromFirestore(doc);
+    });
+  }
+
   Future<ImamModel?> getImam(String imamId) async {
     final doc = await _imams.doc(imamId).get();
     if (!doc.exists) return null;
     return ImamModel.fromFirestore(doc);
   }
 
-  Future<String> uploadFile({
-    required File file,
-    required String path,
-  }) async {
-    final ref = _storage.ref().child(path);
-    await ref.putFile(file);
-    return ref.getDownloadURL();
+ Future<String> uploadFile({
+  required File file,
+  required String path,
+}) async {
+  const cloudName = 'vbc9yur2';
+  const uploadPreset = 'ml_default';
+
+  final url = Uri.parse(
+    'https://api.cloudinary.com/v1_1/$cloudName/image/upload',
+  );
+
+  final request = http.MultipartRequest(
+    'POST',
+    url,
+  );
+
+  request.fields['upload_preset'] = uploadPreset;
+
+  request.files.add(
+    await http.MultipartFile.fromPath(
+      'file',
+      file.path,
+    ),
+  );
+
+  final response = await request.send();
+
+  final responseBody =
+      await response.stream.bytesToString();
+
+  if (response.statusCode == 200 ||
+      response.statusCode == 201) {
+    final json = jsonDecode(responseBody);
+    return json['secure_url'];
   }
+
+  throw Exception(
+    'Cloudinary upload failed: '
+    '${response.statusCode} - $responseBody',
+  );
+}
 
   Future<void> submitRegistration({
     required String imamId,
@@ -101,7 +140,6 @@ class RegistrationRepository {
 final registrationRepositoryProvider = Provider<RegistrationRepository>((ref) {
   return RegistrationRepository(
     firestore: ref.watch(firestoreProvider),
-    storage: ref.watch(firebaseStorageProvider),
   );
 });
 
@@ -110,4 +148,11 @@ final currentImamProvider = StreamProvider<ImamModel?>((ref) {
   final user = ref.watch(authStateChangesProvider).asData?.value;
   if (user == null) return Stream.value(null);
   return ref.watch(registrationRepositoryProvider).watchImam(user.uid);
+});
+
+/// Streams the mosque linked to the current imam (null if imam or mosque not found).
+final currentMosqueProvider = StreamProvider<MosqueModel?>((ref) {
+  final imam = ref.watch(currentImamProvider).asData?.value;
+  if (imam == null || imam.mosqueId == null) return Stream.value(null);
+  return ref.watch(registrationRepositoryProvider).watchMosque(imam.mosqueId!);
 });

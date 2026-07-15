@@ -1,7 +1,8 @@
 enum ImamStatus {
   pending('pending'),
   verified('verified'),
-  rejected('rejected');
+  rejected('rejected'),
+  blocked('blocked');
 
   const ImamStatus(this.value);
 

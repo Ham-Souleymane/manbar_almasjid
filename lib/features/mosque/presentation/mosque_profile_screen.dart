@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
+import '../../../core/l10n/app_localizations.dart';
 import '../data/mosque_model.dart';
 
 class MosqueProfileScreen extends StatefulWidget {
@@ -34,6 +35,7 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
       .doc(widget.mosqueId);
 
   Future<void> _openEditSheet(MosqueModel mosque) async {
+    final l10n = context.l10n;
     final nameController = TextEditingController(text: mosque.name);
     final imamNameController = TextEditingController(text: mosque.imamName);
     final imamPhoneController = TextEditingController(text: mosque.imamPhone);
@@ -59,80 +61,77 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
             top: 20,
           ),
           child: SingleChildScrollView(
-            child: Directionality(
-              textDirection: TextDirection.rtl,
-              child: Form(
-                key: formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const Text(
-                      'تعديل الملف',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+            child: Form(
+              key: formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    l10n.editProfile,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _field(l10n.mosqueName, nameController),
+                  _field(l10n.fullName, imamNameController),
+                  _field(l10n.imamPhone, imamPhoneController,
+                      keyboardType: TextInputType.phone),
+                  _field(l10n.city, cityController),
+                  _field(l10n.address, addressController),
+                  _field(l10n.about, descController, maxLines: 4),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: Text(l10n.cancel),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    _field('اسم المسجد', nameController),
-                    _field('اسم الإمام', imamNameController),
-                    _field('رقم هاتف الإمام', imamPhoneController,
-                        keyboardType: TextInputType.phone),
-                    _field('المدينة', cityController),
-                    _field('العنوان', addressController),
-                    _field('عن المسجد', descController, maxLines: 4),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('إلغاء'),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF0F766E),
+                            foregroundColor: Colors.white,
                           ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF0F766E),
-                              foregroundColor: Colors.white,
-                            ),
-                            onPressed: () async {
-                              try {
-                                await _mosqueRef.update({
-                                  'name': nameController.text.trim(),
-                                  'imamName': imamNameController.text.trim(),
-                                  'imamPhone': imamPhoneController.text.trim(),
-                                  'city': cityController.text.trim(),
-                                  'address': addressController.text.trim(),
-                                  'description': descController.text.trim(),
-                                });
-                                if (context.mounted) {
-                                  Navigator.pop(context);
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('تم تحديث الملف بنجاح'),
-                                    ),
-                                  );
-                                }
-                              } catch (e) {
-                                if (context.mounted) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text('حدث خطأ أثناء الحفظ: $e'),
-                                    ),
-                                  );
-                                }
+                          onPressed: () async {
+                            try {
+                              await _mosqueRef.update({
+                                'name': nameController.text.trim(),
+                                'imamName': imamNameController.text.trim(),
+                                'imamPhone': imamPhoneController.text.trim(),
+                                'city': cityController.text.trim(),
+                                'address': addressController.text.trim(),
+                                'description': descController.text.trim(),
+                              });
+                              if (context.mounted) {
+                                Navigator.pop(context);
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(l10n.profileSaved),
+                                  ),
+                                );
                               }
-                            },
-                            child: const Text('حفظ التعديلات'),
-                          ),
+                            } catch (e) {
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('${l10n.error}: $e'),
+                                  ),
+                                );
+                              }
+                            }
+                          },
+                          child: Text(l10n.saveChanges),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
               ),
             ),
           ),
@@ -164,188 +163,186 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF4F6F8),
-        body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-          stream: _mosqueRef.snapshots(),
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            if (!snapshot.data!.exists) {
-              return const Center(child: Text('لم يتم العثور على المسجد'));
-            }
+    final l10n = context.l10n;
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6F8),
+      body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: _mosqueRef.snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.data!.exists) {
+            return Center(child: Text(l10n.mosqueDataNotFound));
+          }
 
-            final mosque =
-                MosqueModel.fromMap(snapshot.data!.id, snapshot.data!.data()!);
+          final mosque =
+              MosqueModel.fromMap(snapshot.data!.id, snapshot.data!.data()!);
 
-            return NestedScrollView(
-              headerSliverBuilder: (context, innerBoxIsScrolled) {
-                return [
-                  SliverAppBar(
-                    expandedHeight: 220,
-                    pinned: true,
-                    backgroundColor: const Color(0xFF0F766E),
-                    iconTheme: const IconThemeData(color: Colors.white),
-                    flexibleSpace: FlexibleSpaceBar(
-                      background: Stack(
-                        fit: StackFit.expand,
-                        children: [
-                          mosque.coverUrl.isNotEmpty
-                              ? Image.network(mosque.coverUrl,
-                                  fit: BoxFit.cover)
-                              : Container(color: const Color(0xFF0F766E)),
-                          Container(
-                            decoration: BoxDecoration(
-                              gradient: LinearGradient(
-                                begin: Alignment.topCenter,
-                                end: Alignment.bottomCenter,
-                                colors: [
-                                  Colors.black.withOpacity(0.05),
-                                  Colors.black.withOpacity(0.55),
-                                ],
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: 16,
-                            right: 16,
-                            left: 16,
-                            child: Row(
-                              children: [
-                                Container(
-                                  width: 72,
-                                  height: 72,
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    border: Border.all(
-                                        color: Colors.white, width: 3),
-                                    color: Colors.white,
-                                  ),
-                                  child: ClipOval(
-                                    child: mosque.logoUrl.isNotEmpty
-                                        ? Image.network(mosque.logoUrl,
-                                            fit: BoxFit.cover)
-                                        : const Icon(Icons.mosque_rounded,
-                                            color: Color(0xFF0F766E),
-                                            size: 32),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        children: [
-                                          Flexible(
-                                            child: Text(
-                                              mosque.name,
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          if (mosque.isVerified) ...[
-                                            const SizedBox(width: 4),
-                                            const Icon(
-                                                Icons.verified_rounded,
-                                                color: Colors.white,
-                                                size: 18),
-                                          ],
-                                        ],
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        mosque.city.isNotEmpty
-                                            ? mosque.city
-                                            : mosque.address,
-                                        style: TextStyle(
-                                          color:
-                                              Colors.white.withOpacity(0.9),
-                                          fontSize: 13,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                    ],
-                                  ),
-                                ),
+          return NestedScrollView(
+            headerSliverBuilder: (context, innerBoxIsScrolled) {
+              return [
+                SliverAppBar(
+                  expandedHeight: 220,
+                  pinned: true,
+                  backgroundColor: const Color(0xFF0F766E),
+                  iconTheme: const IconThemeData(color: Colors.white),
+                  flexibleSpace: FlexibleSpaceBar(
+                    background: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        mosque.coverUrl.isNotEmpty
+                            ? Image.network(mosque.coverUrl,
+                                fit: BoxFit.cover)
+                            : Container(color: const Color(0xFF0F766E)),
+                        Container(
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.black.withValues(alpha: 0.05),
+                                Colors.black.withValues(alpha: 0.55),
                               ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                    actions: [
-                      Padding(
-                        padding: const EdgeInsets.only(left: 12, top: 4),
-                        child: TextButton.icon(
-                          onPressed: () => _openEditSheet(mosque),
-                          icon: const Icon(Icons.edit_rounded,
-                              color: Colors.white, size: 18),
-                          label: const Text(
-                            'تعديل الملف',
-                            style: TextStyle(color: Colors.white),
+                        ),
+                        Positioned(
+                          bottom: 16,
+                          right: 16,
+                          left: 16,
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 72,
+                                height: 72,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                      color: Colors.white, width: 3),
+                                  color: Colors.white,
+                                ),
+                                child: ClipOval(
+                                  child: mosque.logoUrl.isNotEmpty
+                                      ? Image.network(mosque.logoUrl,
+                                          fit: BoxFit.cover)
+                                      : const Icon(Icons.mosque_rounded,
+                                          color: Color(0xFF0F766E),
+                                          size: 32),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      children: [
+                                        Flexible(
+                                          child: Text(
+                                            mosque.name,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                        if (mosque.isVerified) ...[
+                                          const SizedBox(width: 4),
+                                          const Icon(
+                                              Icons.verified_rounded,
+                                              color: Colors.white,
+                                              size: 18),
+                                        ],
+                                      ],
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      mosque.city.isNotEmpty
+                                          ? mosque.city
+                                          : mosque.address,
+                                      style: TextStyle(
+                                        color:
+                                        Colors.white.withValues(alpha: 0.9),
+                                        fontSize: 13,
+                                      ),
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
-                          style: TextButton.styleFrom(
-                            backgroundColor: Colors.white.withOpacity(0.18),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      child: TextButton.icon(
+                        onPressed: () => _openEditSheet(mosque),
+                        icon: const Icon(Icons.edit_rounded,
+                            color: Colors.white, size: 18),
+                        label: Text(
+                          l10n.edit,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                        style: TextButton.styleFrom(
+                          backgroundColor: Colors.white.withValues(alpha: 0.18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
                           ),
                         ),
                       ),
-                    ],
-                  ),
-                  SliverPersistentHeader(
-                    pinned: true,
-                    delegate: _TabBarDelegate(
-                      TabBar(
-                        controller: _tabController,
-                        labelColor: const Color(0xFF0F766E),
-                        unselectedLabelColor: Colors.black54,
-                        indicatorColor: const Color(0xFF0F766E),
-                        tabs: const [
-                          Tab(text: 'عن المسجد'),
-                          Tab(text: 'المنشورات'),
-                          Tab(text: 'أوقات الصلاة'),
-                          Tab(text: 'الموقع'),
-                        ],
-                      ),
+                    ),
+                  ],
+                ),
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _TabBarDelegate(
+                    TabBar(
+                      controller: _tabController,
+                      labelColor: const Color(0xFF0F766E),
+                      unselectedLabelColor: Colors.black54,
+                      indicatorColor: const Color(0xFF0F766E),
+                      tabs: [
+                        Tab(text: l10n.about),
+                        Tab(text: l10n.posts),
+                        Tab(text: l10n.prayerTimes),
+                        Tab(text: l10n.location),
+                      ],
                     ),
                   ),
-                ];
-              },
-              body: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildAboutTab(mosque),
-                  _buildPostsTab(),
-                  _buildPrayerTimesTab(),
-                  _buildLocationTab(mosque),
-                ],
-              ),
-            );
-          },
-        ),
+                ),
+              ];
+            },
+            body: TabBarView(
+              controller: _tabController,
+              children: [
+                _buildAboutTab(mosque, l10n),
+                _buildPostsTab(l10n),
+                _buildPrayerTimesTab(l10n),
+                _buildLocationTab(mosque, l10n),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
 
-  Widget _buildAboutTab(MosqueModel mosque) {
+  Widget _buildAboutTab(MosqueModel mosque, AppLocalizations l10n) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _infoTile(Icons.person_rounded, 'اسم الإمام',
-            mosque.imamName.isNotEmpty ? mosque.imamName : 'غير محدد'),
-        _infoTile(Icons.phone_rounded, 'رقم الهاتف',
-            mosque.imamPhone.isNotEmpty ? mosque.imamPhone : 'غير محدد'),
+        _infoTile(Icons.person_rounded, l10n.fullName,
+            mosque.imamName.isNotEmpty ? mosque.imamName : l10n.methodUnset),
+        _infoTile(Icons.phone_rounded, l10n.contactPhone,
+            mosque.imamPhone.isNotEmpty ? mosque.imamPhone : l10n.methodUnset),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
@@ -357,15 +354,15 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'الوصف',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+              Text(
+                l10n.description,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
               ),
               const SizedBox(height: 8),
               Text(
                 mosque.description.isNotEmpty
                     ? mosque.description
-                    : 'لا يوجد وصف بعد.',
+                    : l10n.noDescriptionYet,
                 style: const TextStyle(
                   color: Colors.black54,
                   height: 1.6,
@@ -392,7 +389,7 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF0F766E).withOpacity(0.1),
+              color: const Color(0xFF0F766E).withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: const Color(0xFF0F766E), size: 18),
@@ -414,10 +411,11 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
     );
   }
 
-  Widget _buildPostsTab() {
+  Widget _buildPostsTab(AppLocalizations l10n) {
     return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
-      stream: _mosqueRef
+      stream: FirebaseFirestore.instance
           .collection('posts')
+          .where('mosqueId', isEqualTo: widget.mosqueId)
           .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
@@ -426,7 +424,7 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
         }
         final docs = snapshot.data!.docs;
         if (docs.isEmpty) {
-          return const Center(child: Text('لا توجد منشورات بعد'));
+          return Center(child: Text(l10n.noPostsYetMosque));
         }
         return ListView.builder(
           padding: const EdgeInsets.all(16),
@@ -440,7 +438,7 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Text(post['title'] ?? ''),
+              child: Text(post['text'] ?? ''),
             );
           },
         );
@@ -448,17 +446,17 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
     );
   }
 
-  Widget _buildPrayerTimesTab() {
+  Widget _buildPrayerTimesTab(AppLocalizations l10n) {
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: _mosqueRef.collection('prayerTimes').doc('today').snapshots(),
       builder: (context, snapshot) {
         final data = snapshot.data?.data();
         final prayers = {
-          'الفجر': data?['fajr'],
-          'الظهر': data?['dhuhr'],
-          'العصر': data?['asr'],
-          'المغرب': data?['maghrib'],
-          'العشاء': data?['isha'],
+          l10n.fajr: data?['fajr'],
+          l10n.dhuhr: data?['dhuhr'],
+          l10n.asr: data?['asr'],
+          l10n.maghrib: data?['maghrib'],
+          l10n.isha: data?['isha'],
         };
         return ListView(
           padding: const EdgeInsets.all(16),
@@ -487,7 +485,7 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
     );
   }
 
-  Widget _buildLocationTab(MosqueModel mosque) {
+  Widget _buildLocationTab(MosqueModel mosque, AppLocalizations l10n) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -502,10 +500,10 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
           ),
         ),
         const SizedBox(height: 12),
-        _infoTile(Icons.location_city_rounded, 'المدينة',
-            mosque.city.isNotEmpty ? mosque.city : 'غير محدد'),
-        _infoTile(Icons.place_rounded, 'العنوان التفصيلي',
-            mosque.address.isNotEmpty ? mosque.address : 'غير محدد'),
+        _infoTile(Icons.location_city_rounded, l10n.city,
+            mosque.city.isNotEmpty ? mosque.city : l10n.methodUnset),
+        _infoTile(Icons.place_rounded, l10n.detailedAddress,
+            mosque.address.isNotEmpty ? mosque.address : l10n.methodUnset),
       ],
     );
   }

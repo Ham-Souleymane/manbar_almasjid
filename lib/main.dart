@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'core/l10n/app_localizations.dart';
+import 'core/providers/locale_provider.dart';
 import 'core/router/app_router.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
@@ -39,24 +41,38 @@ Future<void> main() async {
   );
 }
 
-class ManbarAlmasjidApp extends ConsumerWidget {
+class ManbarAlmasjidApp extends ConsumerStatefulWidget {
   const ManbarAlmasjidApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ManbarAlmasjidApp> createState() => _ManbarAlmasjidAppState();
+}
+
+class _ManbarAlmasjidAppState extends ConsumerState<ManbarAlmasjidApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Restore persisted locale on startup
+    Future.microtask(() => ref.read(localeProvider.notifier).load());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(routerProvider);
+    final locale = ref.watch(localeProvider);
 
     return MaterialApp.router(
-      title: 'منبر المسجد',
+      title: 'Manbar AlMasjid',
       debugShowCheckedModeBanner: false,
 
-      // ── RTL & Arabic Localization ─────────────────────────────
-      locale: const Locale('ar', 'AE'),
+      // ── Localization ────────────────────────────────────────
+      locale: locale,
       supportedLocales: const [
         Locale('ar', 'AE'),
         Locale('en', 'US'),
       ],
       localizationsDelegates: const [
+        AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,

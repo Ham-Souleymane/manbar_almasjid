@@ -1,93 +1,131 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../data/mosque_model.dart';
+import '../../../core/l10n/app_localizations.dart';
+import '../../registration/data/registration_repository.dart';
+import '../../registration/domain/imam_model.dart';
+import '../../registration/domain/mosque_model.dart';
 import '../widgets/action_card.dart';
 import '../widgets/bottom_nav_bar.dart';
+import '../../posts/presentation/create_post_screen.dart';
+import '../../posts/presentation/my_posts_screen.dart';
+import '../../../core/providers/firebase_providers.dart';
+import '../../../core/router/app_router.dart';
+import '../../admin/presentation/admin_panel_screen.dart';
+import '../../notifications/presentation/notifications_screen.dart';
+import '../../profile/presentation/profile_settings_screen.dart';
 import 'mosque_profile_screen.dart';
 
-class HomeDashboardScreen extends StatefulWidget {
+class HomeDashboardScreen extends ConsumerStatefulWidget {
   const HomeDashboardScreen({super.key});
 
   @override
-  State<HomeDashboardScreen> createState() => _HomeDashboardScreenState();
+  ConsumerState<HomeDashboardScreen> createState() =>
+      _HomeDashboardScreenState();
 }
 
-class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
+class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
   int _navIndex = 0;
-
-  String get _uid => FirebaseAuth.instance.currentUser?.uid ?? '';
 
   @override
   Widget build(BuildContext context) {
-    return Directionality(
-      textDirection: TextDirection.rtl,
-      child: Scaffold(
-        backgroundColor: const Color(0xFFF4F6F8),
-        body: SafeArea(
-          child: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-            stream: FirebaseFirestore.instance
-                .collection('mosques')
-                .doc(_uid)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (!snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              if (!snapshot.data!.exists) {
-                return const Center(
-                  child: Text('لم يتم العثور على بيانات المسجد'),
-                );
-              }
+    final l10n = context.l10n;
+    final isAdmin = ref.watch(isAdminProvider).asData?.value ?? false;
+    if (isAdmin) {
+      return const AdminPanelScreen();
+    }
 
-              final mosque =
-                  MosqueModel.fromMap(snapshot.data!.id, snapshot.data!.data()!);
-              final isPending = mosque.imamStatus == 'pending';
+    final imamAsync = ref.watch(currentImamProvider);
+    final mosqueAsync = ref.watch(currentMosqueProvider);
 
-              return RefreshIndicator(
-                onRefresh: () async {},
-                child: ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    _buildGreeting(mosque),
-                    const SizedBox(height: 16),
-                    if (isPending) _buildPendingBanner(),
-                    if (isPending) const SizedBox(height: 16),
-                    _buildMosqueProfileCard(mosque),
-                    const SizedBox(height: 20),
-                    _buildActionGrid(isPending),
-                    const SizedBox(height: 24),
-                    _buildStatsSection(),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              );
-            },
-          ),
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F6F8),
+      body: SafeArea(
+        child: imamAsync.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('${l10n.errorLoadingProfile}: $e')),
+          data: (imam) {
+            if (imam == null) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            return mosqueAsync.when(
+              loading: () =>
+                  const Center(child: CircularProgressIndicator()),
+              error: (e, _) =>
+                  Center(child: Text('${l10n.errorLoadingMosque}: $e')),
+              data: (mosque) {
+                if (mosque == null) {
+                  return Center(
+                    child: Text(l10n.mosqueDataNotFound),
+                  );
+                }
+                Widget body;
+                if (_navIndex == 1) {
+                  body = const MyPostsScreen();
+                } else if (_navIndex == 3) {
+                  body = const ProfileSettingsScreen();
+                } else if (_navIndex == 4) {
+                  body = const AdminPanelScreen();
+                } else {
+                  body = RefreshIndicator(
+                    onRefresh: () async {},
+                    child: ListView(
+                      padding: const EdgeInsets.all(16),
+                      children: [
+                        _buildGreeting(imam, l10n),
+                        const SizedBox(height: 16),
+                        if (imam.isPending) _buildPendingBanner(l10n),
+                        if (imam.isPending) const SizedBox(height: 16),
+                        _buildMosqueProfileCard(mosque, l10n),
+                        const SizedBox(height: 20),
+                        _buildActionGrid(imam.isPending, l10n),
+                        const SizedBox(height: 24),
+                        _buildStatsSection(mosque.id, imam.id, l10n),
+                        const SizedBox(height: 12),
+                      ],
+                    ),
+                  );
+                }
+                return body;
+              },
+            );
+          },
         ),
-        bottomNavigationBar: ManbarBottomNavBar(
-          currentIndex: _navIndex,
-          onTap: (i) => setState(() => _navIndex = i),
-        ),
+      ),
+      bottomNavigationBar: ManbarBottomNavBar(
+        currentIndex: _navIndex,
+        showAdmin: isAdmin,
+        onTap: (i) {
+          if (i == 2) {
+            // Prayer times tab — push route, don't change body index
+            final mosque = mosqueAsync.asData?.value;
+            if (mosque != null) {
+              context.push(AppRoutes.prayerTimes, extra: mosque.id);
+            }
+            return;
+          }
+          setState(() => _navIndex = i);
+        },
       ),
     );
   }
 
-  Widget _buildGreeting(MosqueModel mosque) {
+  Widget _buildGreeting(ImamModel imam, AppLocalizations l10n) {
     return Row(
       children: [
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'السلام عليكم',
-                style: TextStyle(fontSize: 15, color: Colors.black54),
+              Text(
+                l10n.greeting,
+                style: const TextStyle(fontSize: 15, color: Colors.black54),
               ),
               const SizedBox(height: 2),
               Text(
-                'الإمام ${mosque.imamName.isNotEmpty ? mosque.imamName : ''}',
+                l10n.imamName(imam.fullName.isNotEmpty ? imam.fullName : ''),
                 style: const TextStyle(
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
@@ -97,26 +135,33 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
             ],
           ),
         ),
-        Container(
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 8,
-              ),
-            ],
+        GestureDetector(
+          onTap: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(14),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 8,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.notifications_none_rounded,
+                color: Color(0xFF0F766E)),
           ),
-          child: const Icon(Icons.notifications_none_rounded,
-              color: Color(0xFF0F766E)),
         ),
       ],
     );
   }
 
-  Widget _buildPendingBanner() {
+  Widget _buildPendingBanner(AppLocalizations l10n) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(14),
@@ -129,10 +174,10 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
         children: [
           const Icon(Icons.hourglass_top_rounded, color: Color(0xFFB7791F)),
           const SizedBox(width: 10),
-          const Expanded(
+          Expanded(
             child: Text(
-              'حسابك قيد المراجعة من الإدارة. لن تتمكن من النشر أو استخدام بعض الميزات حتى تتم الموافقة على حسابك.',
-              style: TextStyle(
+              l10n.pendingBanner,
+              style: const TextStyle(
                 fontSize: 13,
                 color: Color(0xFF7C5A16),
                 height: 1.5,
@@ -144,7 +189,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
     );
   }
 
-  Widget _buildMosqueProfileCard(MosqueModel mosque) {
+  Widget _buildMosqueProfileCard(MosqueModel mosque, AppLocalizations l10n) {
     return GestureDetector(
       onTap: () {
         Navigator.of(context).push(
@@ -160,7 +205,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           borderRadius: BorderRadius.circular(18),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -170,9 +215,9 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           children: [
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: mosque.logoUrl.isNotEmpty
+              child: mosque.photo != null && mosque.photo!.isNotEmpty
                   ? Image.network(
-                      mosque.logoUrl,
+                      mosque.photo!,
                       width: 64,
                       height: 64,
                       fit: BoxFit.cover,
@@ -202,7 +247,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      if (mosque.isVerified) ...[
+                      if (mosque.verified) ...[
                         const SizedBox(width: 4),
                         const Icon(Icons.verified_rounded,
                             color: Color(0xFF0F766E), size: 18),
@@ -219,7 +264,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                         child: Text(
                           mosque.city.isNotEmpty
                               ? mosque.city
-                              : 'الموقع غير محدد',
+                              : l10n.locationUnset,
                           style: const TextStyle(
                             fontSize: 13,
                             color: Colors.black54,
@@ -232,14 +277,14 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.chevron_left_rounded, color: Colors.black38),
+            const Icon(Icons.chevron_right_rounded, color: Colors.black38),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildActionGrid(bool isPending) {
+  Widget _buildActionGrid(bool isPending, AppLocalizations l10n) {
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
@@ -250,75 +295,121 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
       children: [
         ActionCard(
           icon: Icons.campaign_rounded,
-          title: 'نشر إعلان',
+          title: l10n.publishAnnouncement,
           color: const Color(0xFF0F766E),
           disabled: isPending,
           onTap: () {
-            // TODO: navigate to create-post screen
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const CreatePostScreen(),
+              ),
+            );
           },
         ),
         ActionCard(
           icon: Icons.access_time_filled_rounded,
-          title: 'إدارة أوقات الصلاة',
+          title: l10n.managePrayerTimes,
           color: const Color(0xFF2563EB),
           disabled: isPending,
           onTap: () {
-            // TODO: navigate to prayer times management screen
+            final mosque = ref.read(currentMosqueProvider).asData?.value;
+            if (mosque != null) {
+              context.push(AppRoutes.prayerTimes, extra: mosque.id);
+            }
           },
         ),
         ActionCard(
           icon: Icons.grid_view_rounded,
-          title: 'عرض المنشورات',
+          title: l10n.viewPosts,
           color: const Color(0xFF9333EA),
           onTap: () {
-            // TODO: navigate to posts list screen
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const MyPostsScreen(),
+              ),
+            );
           },
         ),
         ActionCard(
           icon: Icons.notifications_active_rounded,
-          title: 'رسائل وتنبيهات',
+          title: l10n.notificationsAlerts,
           color: const Color(0xFFDB6A26),
           onTap: () {
-            // TODO: navigate to messages/notifications screen
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const NotificationsScreen()),
+            );
           },
         ),
       ],
     );
   }
 
-  Widget _buildStatsSection() {
+  Widget _buildStatsSection(String mosqueId, String imamId, AppLocalizations l10n) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'إحصائيات اليوم',
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+        Text(
+          l10n.todayStats,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 10),
-        StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
           stream: FirebaseFirestore.instance
-              .collection('mosques')
-              .doc(_uid)
-              .collection('stats')
-              .doc('today')
+              .collection('posts')
+              .where('mosqueId', isEqualTo: mosqueId)
               .snapshots(),
-          builder: (context, snapshot) {
-            final data = snapshot.data?.data();
-            final views = data?['views'] ?? 0;
-            final followers = data?['followers'] ?? 0;
-            final notifications = data?['notifications'] ?? 0;
+          builder: (context, postsSnapshot) {
+            final posts = postsSnapshot.data?.docs ?? [];
+            final totalViews = posts.fold<int>(
+                0, (acc, doc) => acc + ((doc.data()['viewCount'] as int?) ?? 0));
 
-            return Row(
-              children: [
-                _statTile('مشاهدات', views.toString(),
-                    Icons.remove_red_eye_rounded, const Color(0xFF0F766E)),
-                const SizedBox(width: 10),
-                _statTile('متابعون', followers.toString(),
-                    Icons.people_alt_rounded, const Color(0xFF2563EB)),
-                const SizedBox(width: 10),
-                _statTile('تنبيهات', notifications.toString(),
-                    Icons.notifications_rounded, const Color(0xFFDB6A26)),
-              ],
+            return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+              stream: FirebaseFirestore.instance
+                  .collection('mosques')
+                  .doc(mosqueId)
+                  .collection('stats')
+                  .doc('today')
+                  .snapshots(),
+              builder: (context, snapshot) {
+                final data = snapshot.data?.data();
+                final notifications = data?['notifications'] ?? 0;
+
+                return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                  stream: FirebaseFirestore.instance
+                      .collection('mosques')
+                      .doc(mosqueId)
+                      .collection('followers')
+                      .snapshots(),
+                  builder: (context, mosqueFollowersSnapshot) {
+                    final mosqueFollowers = mosqueFollowersSnapshot.data?.size ?? 0;
+
+                    return StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+                      stream: FirebaseFirestore.instance
+                          .collection('imams')
+                          .doc(imamId)
+                          .collection('followers')
+                          .snapshots(),
+                      builder: (context, followersSnapshot) {
+                        final directImamFollowers = followersSnapshot.data?.size ?? 0;
+                        final totalFollowers = mosqueFollowers + directImamFollowers;
+
+                        return Row(
+                          children: [
+                            _statTile(l10n.views, totalViews.toString(),
+                                Icons.remove_red_eye_rounded, const Color(0xFF0F766E)),
+                            const SizedBox(width: 10),
+                            _statTile(l10n.followers, totalFollowers.toString(),
+                                Icons.people_alt_rounded, const Color(0xFF2563EB)),
+                            const SizedBox(width: 10),
+                            _statTile(l10n.alerts, notifications.toString(),
+                                Icons.notifications_rounded, const Color(0xFFDB6A26)),
+                          ],
+                        );
+                      },
+                    );
+                  },
+                );
+              },
             );
           },
         ),
@@ -335,7 +426,7 @@ class _HomeDashboardScreenState extends State<HomeDashboardScreen> {
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.05),
+              color: Colors.black.withValues(alpha: 0.05),
               blurRadius: 8,
             ),
           ],

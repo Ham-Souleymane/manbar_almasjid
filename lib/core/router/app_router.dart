@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -11,6 +10,7 @@ import '../../features/registration/presentation/imam_registration_screen.dart';
 import '../../features/registration/presentation/mosque_registration_screen.dart';
 import '../../features/registration/presentation/under_review_screen.dart';
 import '../../features/mosque/presentation/home_dashboard_screen.dart';
+import '../../features/prayer_times/presentation/prayer_times_screen.dart';
 
 // ── Route names ───────────────────────────────────────────────
 abstract class AppRoutes {
@@ -20,12 +20,14 @@ abstract class AppRoutes {
   static const registerMosque = '/register/mosque';
   static const underReview = '/under-review';
   static const home = '/home';
+  static const prayerTimes = '/prayer-times';
 }
 
 // ── Router provider ───────────────────────────────────────────
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateChangesProvider);
   final imamState = ref.watch(currentImamProvider);
+  final isAdminAsync = ref.watch(isAdminProvider);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
@@ -33,13 +35,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) {
       final location = state.matchedLocation;
 
-      if (authState.isLoading || imamState.isLoading) {
+      if (authState.isLoading || imamState.isLoading || isAdminAsync.isLoading) {
         if (location != AppRoutes.splash) return AppRoutes.splash;
         return null;
       }
 
       final user = authState.asData?.value;
       final isLoggedIn = user != null;
+      final isAdmin = isAdminAsync.asData?.value ?? false;
       final imam = imamState.asData?.value;
 
       const publicRoutes = {AppRoutes.splash, AppRoutes.login};
@@ -48,8 +51,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Splash → resolve destination once auth + profile are loaded
       if (location == AppRoutes.splash) {
         if (!isLoggedIn) return AppRoutes.login;
+        if (isAdmin) return AppRoutes.home;
         if (imam == null) return AppRoutes.registerImam;
-        if (imam.status == ImamStatus.pending) return AppRoutes.underReview;
+        if (imam.status == ImamStatus.pending || imam.status == ImamStatus.blocked) {
+          return AppRoutes.underReview;
+        }
         if (imam.status == ImamStatus.rejected) return AppRoutes.registerImam;
         return AppRoutes.home;
       }
@@ -60,14 +66,24 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
+      // Admin bypasses all registration/under review checks and goes directly to home
+      if (isAdmin) {
+        if (publicRoutes.contains(location) ||
+            registrationRoutes.contains(location) ||
+            location == AppRoutes.underReview) {
+          return AppRoutes.home;
+        }
+        return null;
+      }
+
       // Logged in — no imam profile yet → registration flow
       if (imam == null) {
         if (!registrationRoutes.contains(location)) return AppRoutes.registerImam;
         return null;
       }
 
-      // Pending review → under review screen
-      if (imam.status == ImamStatus.pending) {
+      // Pending review or Blocked → under review screen
+      if (imam.status == ImamStatus.pending || imam.status == ImamStatus.blocked) {
         if (location != AppRoutes.underReview) return AppRoutes.underReview;
         return null;
       }
@@ -117,6 +133,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: AppRoutes.home,
         name: 'home',
         builder: (context, state) => const HomeDashboardScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.prayerTimes,
+        name: 'prayerTimes',
+        builder: (context, state) {
+          final mosqueId = state.extra as String? ?? '';
+          return PrayerTimesScreen(mosqueId: mosqueId);
+        },
       ),
     ],
   );

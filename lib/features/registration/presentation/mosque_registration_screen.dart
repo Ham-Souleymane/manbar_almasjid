@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../core/utils/extensions.dart';
@@ -92,15 +93,16 @@ class _MosqueRegistrationScreenState
   }
 
   Future<void> _submit() async {
+    final l10n = context.l10n;
     if (!_formKey.currentState!.validate()) return;
     if (_country.isEmpty) {
-      context.showSnackBar('يرجى اختيار الدولة', isError: true);
+      context.showSnackBar(l10n.selectCountryFirst, isError: true);
       return;
     }
 
     final regState = ref.read(registrationControllerProvider);
     if (regState.location == null) {
-      context.showSnackBar('يرجى تحديد موقع المسجد على الخريطة', isError: true);
+      context.showSnackBar(l10n.selectMosqueLocation, isError: true);
       return;
     }
 
@@ -124,12 +126,13 @@ class _MosqueRegistrationScreenState
       context.go(AppRoutes.underReview);
     } else {
       final error = ref.read(registrationControllerProvider).errorMessage;
-      context.showSnackBar(error ?? 'حدث خطأ', isError: true);
+      context.showSnackBar(error ?? l10n.anErrorOccurred, isError: true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final regState = ref.watch(registrationControllerProvider);
 
     return LoadingOverlay(
@@ -137,7 +140,7 @@ class _MosqueRegistrationScreenState
       child: Scaffold(
         backgroundColor: AppColors.cream,
         appBar: AppBar(
-          title: const Text('تسجيل المسجد'),
+          title: Text(l10n.registerMosque),
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
@@ -155,22 +158,21 @@ class _MosqueRegistrationScreenState
                   const RegistrationProgressIndicator(currentStep: 2),
                   const SizedBox(height: 28),
                   Text(
-                    'بيانات المسجد',
+                    l10n.mosqueData,
                     style: GoogleFonts.tajawal(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: AppColors.emeraldDark,
                     ),
-                    textDirection: TextDirection.rtl,
                   ),
                   const SizedBox(height: 24),
                   AuthTextField(
-                    label: 'اسم المسجد',
-                    hint: 'مسجد النور',
+                    label: l10n.mosqueName,
+                    hint: l10n.mosqueNameHint,
                     controller: _nameController,
                     prefixIcon: Icons.mosque_outlined,
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'أدخل اسم المسجد';
+                      if (v == null || v.trim().isEmpty) return l10n.enterMosqueName;
                       return null;
                     },
                   ),
@@ -178,27 +180,29 @@ class _MosqueRegistrationScreenState
                   _CountryPickerField(
                     country: _country,
                     onTap: _pickCountry,
+                    label: l10n.countryLabel,
+                    placeholder: l10n.chooseCountry,
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
-                    label: 'المدينة',
-                    hint: 'تُملأ تلقائياً من الخريطة أو أدخلها يدوياً',
+                    label: l10n.city,
+                    hint: l10n.cityHint,
                     controller: _cityController,
                     prefixIcon: Icons.location_city_outlined,
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'أدخل المدينة';
+                      if (v == null || v.trim().isEmpty) return l10n.enterCity;
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
-                    label: 'العنوان',
-                    hint: 'الشارع، الحي، الرمز البريدي...',
+                    label: l10n.address,
+                    hint: l10n.addressHint,
                     controller: _addressController,
                     prefixIcon: Icons.place_outlined,
                     keyboardType: TextInputType.streetAddress,
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'أدخل العنوان';
+                      if (v == null || v.trim().isEmpty) return l10n.enterAddress;
                       return null;
                     },
                   ),
@@ -210,28 +214,28 @@ class _MosqueRegistrationScreenState
                   ),
                   const SizedBox(height: 24),
                   DocumentUploadArea(
-                    label: 'صورة المسجد',
-                    hint: 'اضغط لرفع صورة للمسجد',
+                    label: l10n.mosquePhoto,
+                    hint: l10n.uploadMosquePhoto,
                     file: _mosquePhoto,
                     onFileSelected: (file) => setState(() => _mosquePhoto = file),
                   ),
                   const SizedBox(height: 16),
                   const SizedBox(height: 16),
                   AuthTextField(
-                    label: 'رقم التواصل',
-                    hint: '+966 5XX XXX XXXX',
+                    label: l10n.contactPhone,
+                    hint: l10n.contactHint,
                     controller: _contactController,
                     prefixIcon: Icons.phone_in_talk_outlined,
                     keyboardType: TextInputType.phone,
                     textInputAction: TextInputAction.done,
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'أدخل رقم التواصل';
+                      if (v == null || v.trim().isEmpty) return l10n.enterContactNumber;
                       return null;
                     },
                   ),
                   const SizedBox(height: 32),
                   AppButton(
-                    label: 'حفظ وإرسال للمراجعة',
+                    label: l10n.saveAndSubmit,
                     isLoading: regState.isSubmitting,
                     onPressed: regState.isSubmitting ? null : _submit,
                   ),
@@ -249,10 +253,14 @@ class _CountryPickerField extends StatelessWidget {
   const _CountryPickerField({
     required this.country,
     required this.onTap,
+    required this.label,
+    required this.placeholder,
   });
 
   final String country;
   final VoidCallback onTap;
+  final String label;
+  final String placeholder;
 
   @override
   Widget build(BuildContext context) {
@@ -260,21 +268,19 @@ class _CountryPickerField extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: InputDecorator(
-        decoration: const InputDecoration(
-          labelText: 'الدولة',
-          prefixIcon: Icon(Icons.public_outlined, size: 20),
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: const Icon(Icons.public_outlined, size: 20),
         ),
         child: Row(
           children: [
             Expanded(
               child: Text(
-                country.isEmpty ? 'اختر الدولة' : country,
+                country.isEmpty ? placeholder : country,
                 style: GoogleFonts.tajawal(
                   fontSize: 15,
                   color: country.isEmpty ? AppColors.grey500 : AppColors.charcoal,
                 ),
-                textDirection: TextDirection.rtl,
-                textAlign: TextAlign.right,
               ),
             ),
             const Icon(Icons.arrow_drop_down, color: AppColors.grey500),

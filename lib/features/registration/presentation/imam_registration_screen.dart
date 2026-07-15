@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -71,7 +72,7 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
     if (!mounted) return;
     final state = ref.read(authControllerProvider);
     if (state.hasError) {
-      context.showSnackBar(state.errorMessage ?? 'فشل تسجيل الدخول عبر Google', isError: true);
+      context.showSnackBar(state.errorMessage ?? context.l10n.failedGoogleLogin, isError: true);
     }
   }
 
@@ -81,7 +82,7 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
     if (!mounted) return;
     final state = ref.read(authControllerProvider);
     if (state.hasError) {
-      context.showSnackBar(state.errorMessage ?? 'فشل تسجيل الدخول عبر Apple', isError: true);
+      context.showSnackBar(state.errorMessage ?? context.l10n.failedAppleLogin, isError: true);
     }
   }
 
@@ -104,7 +105,7 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
       if (authState.hasError) {
         setState(() => _isCreatingAccount = false);
         context.showSnackBar(
-          authState.errorMessage ?? 'حدث خطأ',
+          authState.errorMessage ?? context.l10n.anErrorOccurred,
           isError: true,
         );
         return;
@@ -123,6 +124,7 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     final authState = ref.watch(authControllerProvider);
     final authStateChanges = ref.watch(authStateChangesProvider);
 
@@ -146,7 +148,7 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
       child: Scaffold(
         backgroundColor: AppColors.cream,
         appBar: AppBar(
-          title: const Text('تسجيل الإمام'),
+          title: Text(l10n.registerImam),
           centerTitle: true,
         ),
         body: SafeArea(
@@ -160,87 +162,85 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
                   const RegistrationProgressIndicator(currentStep: 1),
                   const SizedBox(height: 28),
                   Text(
-                     'بيانات الإمام',
+                    l10n.imamData,
                     style: GoogleFonts.tajawal(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
                       color: AppColors.emeraldDark,
                     ),
-                    textDirection: TextDirection.rtl,
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'أدخل معلوماتك الشخصية للمتابعة',
+                    l10n.imamDataSubtitle,
                     style: GoogleFonts.tajawal(
                       fontSize: 14,
                       color: AppColors.grey500,
                     ),
-                    textDirection: TextDirection.rtl,
                   ),
                   const SizedBox(height: 24),
                   AuthTextField(
-                    label: 'الاسم الكامل',
-                    hint: 'محمد أحمد',
+                    label: l10n.fullName,
+                    hint: l10n.fullNameHint,
                     controller: _fullNameController,
                     prefixIcon: Icons.person_outline,
                     keyboardType: TextInputType.name,
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'أدخل الاسم الكامل';
+                      if (v == null || v.trim().isEmpty) return l10n.enterFullName;
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
-                    label: 'رقم الهاتف',
-                    hint: '+966 5XX XXX XXXX',
+                    label: l10n.contactPhone,
+                    hint: l10n.phoneHint,
                     controller: _phoneController,
                     prefixIcon: Icons.phone_outlined,
                     keyboardType: TextInputType.phone,
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'أدخل رقم الهاتف';
+                      if (v == null || v.trim().isEmpty) return l10n.enterPhone;
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
                   AuthTextField(
-                    label: 'البريد الإلكتروني',
-                    hint: 'imam@masjid.com',
+                    label: l10n.email,
+                    hint: l10n.emailHint,
                     controller: _emailController,
                     prefixIcon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     readOnly: isAlreadyAuthenticated,
                     validator: (v) {
-                      if (v == null || v.trim().isEmpty) return 'أدخل البريد الإلكتروني';
-                      if (!v.trim().isValidEmail) return 'البريد الإلكتروني غير صالح';
+                      if (v == null || v.trim().isEmpty) return l10n.enterEmail;
+                      if (!v.trim().isValidEmail) return l10n.invalidEmail;
                       return null;
                     },
                   ),
                   if (!isAlreadyAuthenticated) ...[
                     const SizedBox(height: 16),
                     AuthTextField(
-                      label: 'كلمة المرور',
-                      hint: '••••••••',
+                      label: l10n.password,
+                      hint: l10n.passwordHint,
                       controller: _passwordController,
                       prefixIcon: Icons.lock_outline_rounded,
                       isPassword: true,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'أدخل كلمة المرور';
-                        if (v.length < 6) return 'يجب أن تكون 6 أحرف على الأقل';
+                        if (v == null || v.isEmpty) return l10n.enterPassword;
+                        if (v.length < 6) return l10n.passwordMinLength;
                         return null;
                       },
                     ),
                     const SizedBox(height: 16),
                     AuthTextField(
-                      label: 'تأكيد كلمة المرور',
-                      hint: '••••••••',
+                      label: l10n.confirmPassword,
+                      hint: l10n.passwordHint,
                       controller: _confirmPasswordController,
                       prefixIcon: Icons.lock_outline_rounded,
                       isPassword: true,
                       textInputAction: TextInputAction.done,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'أكّد كلمة المرور';
+                        if (v == null || v.isEmpty) return l10n.enterConfirmPassword;
                         if (v != _passwordController.text) {
-                          return 'كلمتا المرور غير متطابقتين';
+                          return l10n.passwordsDoNotMatch;
                         }
                         return null;
                       },
@@ -252,7 +252,7 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
-                            'أو',
+                            l10n.orDivider,
                             style: GoogleFonts.tajawal(
                               fontSize: 13,
                               color: AppColors.grey500,
@@ -265,20 +265,20 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
                     ),
                     const SizedBox(height: 16),
                     GoogleSignInButton(
-                      label: 'المتابعة عبر Google',
+                      label: l10n.continueWithGoogle,
                       onPressed: isLoading ? null : _signInWithGoogle,
                       isLoading: isLoading && authState.isLoading,
                     ),
                     const SizedBox(height: 12),
                     AppleSignInButton(
-                      label: 'المتابعة عبر Apple',
+                      label: l10n.continueWithApple,
                       onPressed: isLoading ? null : _signInWithApple,
                       isLoading: isLoading && authState.isLoading,
                     ),
                   ],
                   const SizedBox(height: 32),
                   AppButton(
-                    label: 'التالي',
+                    label: l10n.next,
                     isLoading: isLoading,
                     onPressed: isLoading ? null : _onNext,
                   ),

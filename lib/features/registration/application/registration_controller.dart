@@ -121,10 +121,12 @@ class RegistrationController extends Notifier<RegistrationState> {
 
       state = state.copyWith(isSubmitting: false);
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      print('SUBMIT REGISTRATION ERROR: $e');
+      print(stack);
       state = state.copyWith(
         isSubmitting: false,
-        errorMessage: 'فشل حفظ البيانات. حاول مرة أخرى.',
+        errorMessage: 'فشل حفظ البيانات: $e',
       );
       return false;
     }

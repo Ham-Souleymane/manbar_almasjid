@@ -14,6 +14,7 @@ class MosqueModel {
     required this.verified,
     required this.createdAt,
     this.capacity,
+    this.calculationMethod = 4,
   });
 
   final String id;
@@ -28,6 +29,8 @@ class MosqueModel {
   final bool verified;
   final DateTime createdAt;
   final int? capacity;
+  /// Aladhan calculation method ID (default 4 = Umm al-Qura).
+  final int calculationMethod;
 
   factory MosqueModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data()!;
@@ -44,6 +47,7 @@ class MosqueModel {
       verified: data['verified'] as bool? ?? false,
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       capacity: data['capacity'] as int?,
+      calculationMethod: data['calculationMethod'] as int? ?? 4,
     );
   }
 
@@ -60,6 +64,7 @@ class MosqueModel {
       'verified': verified,
       'createdAt': Timestamp.fromDate(createdAt),
       if (capacity != null) 'capacity': capacity,
+      'calculationMethod': calculationMethod,
     };
   }
 }
