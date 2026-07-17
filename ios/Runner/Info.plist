@@ -84,5 +84,11 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- App Store Export Compliance: app does not use non-exempt encryption -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<!-- Microphone usage description (required if any media capture is possible) -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>نحتاج إلى الميكروفون لتسجيل الصوت إن لزم الأمر.</string>
 </dict>
 </plist>

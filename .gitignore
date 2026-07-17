@@ -49,3 +49,7 @@ functions/serviceAccountKey.json
 
 # Node / Dependency directories
 **/node_modules/
+
+# Android signing – NEVER commit these to version control
+android/key.properties
+android/app/release.jks
