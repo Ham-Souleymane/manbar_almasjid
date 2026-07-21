@@ -69,10 +69,16 @@ class AuthRepository implements IAuthRepository {
     required String email,
     required String password,
   }) async {
-    return _auth.signInWithEmailAndPassword(
+    // On web, explicitly set persistence so the session survives a page refresh.
+    if (kIsWeb) {
+      await _auth.setPersistence(Persistence.LOCAL);
+    }
+    final credential = await _auth.signInWithEmailAndPassword(
       email: email.trim(),
       password: password,
     );
+    debugPrint('[AuthRepo] signInWithEmailAndPassword success: uid=${credential.user?.uid}');
+    return credential;
   }
 
   @override

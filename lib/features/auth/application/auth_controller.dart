@@ -10,30 +10,33 @@ import 'auth_state.dart';
 class AuthController extends Notifier<AuthState> {
   @override
   AuthState build() {
-    // Listen to Firebase auth state stream and keep controller in sync
-    ref.listen<AsyncValue<User?>>(
-      authStateChangesProvider,
-      (previous, next) {
-        next.when(
-          data: (user) {
-            if (user != null) {
-              state = AuthState(status: AuthStatus.authenticated, user: user);
-            } else {
-              state = const AuthState(status: AuthStatus.unauthenticated);
-            }
-          },
-          error: (err, stack) {
-            state = AuthState(status: AuthStatus.error, errorMessage: err.toString());
-          },
-          loading: () {
-            // Only update to loading if we aren't initial or already authenticated
-            if (state.status == AuthStatus.initial) {
-              state = state.copyWith(status: AuthStatus.loading);
-            }
-          },
-        );
-      },
-    );
+    // Listen to Firebase auth state stream and keep controller in sync.
+    // We only update from the stream when we are NOT in the middle of an
+    // operation (loading) so we don't race against explicit state sets.
+    ref.listen<AsyncValue<User?>>(authStateChangesProvider, (previous, next) {
+      next.when(
+        data: (user) {
+          // Don't override an error state that was just set by a method.
+          if (state.status == AuthStatus.error) return;
+          if (user != null) {
+            state = AuthState(status: AuthStatus.authenticated, user: user);
+          } else if (state.status != AuthStatus.loading) {
+            // Only go to unauthenticated if we're not mid-operation
+            state = const AuthState(status: AuthStatus.unauthenticated);
+          }
+        },
+        error: (err, stack) {
+          debugPrint('[AuthController] stream error: $err');
+          state = AuthState(
+              status: AuthStatus.error, errorMessage: err.toString());
+        },
+        loading: () {
+          if (state.status == AuthStatus.initial) {
+            state = state.copyWith(status: AuthStatus.loading);
+          }
+        },
+      );
+    });
     return const AuthState();
   }
 
@@ -65,27 +68,31 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  // ── Sign In ────────────────────────────────────────────────
+  // ── Sign In ──────────────────────────────────────────
   Future<void> signInWithEmailAndPassword({
     required String email,
     required String password,
   }) async {
-    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+    state = AuthState(status: AuthStatus.loading);
     try {
+      debugPrint('[AuthController] signInWithEmailAndPassword: email=$email');
       final credential = await _repo.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
+      debugPrint('[AuthController] sign-in success: uid=${credential.user?.uid}');
       state = AuthState(
         status: AuthStatus.authenticated,
         user: credential.user,
       );
     } on FirebaseAuthException catch (e) {
+      debugPrint('[AuthController] FirebaseAuthException: code=${e.code}, message=${e.message}');
       state = AuthState(
         status: AuthStatus.error,
         errorMessage: _mapFirebaseError(e),
       );
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[AuthController] Unexpected error in signIn: $e\n$stack');
       state = AuthState(
         status: AuthStatus.error,
         errorMessage: 'حدث خطأ غير متوقع.',

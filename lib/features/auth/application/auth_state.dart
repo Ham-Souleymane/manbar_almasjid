@@ -9,6 +9,9 @@ enum AuthStatus {
   error,
 }
 
+// Sentinel used to differentiate "not provided" from "explicitly null".
+const _kClearError = Object();
+
 /// Immutable auth state object.
 class AuthState {
   const AuthState({
@@ -25,15 +28,19 @@ class AuthState {
   bool get isAuthenticated => status == AuthStatus.authenticated;
   bool get hasError => status == AuthStatus.error;
 
+  /// Pass [errorMessage] = null to explicitly clear the error.
+  /// If [errorMessage] is omitted entirely, the current value is preserved.
   AuthState copyWith({
     AuthStatus? status,
     User? user,
-    String? errorMessage,
+    Object? errorMessage = _kClearError,
   }) {
     return AuthState(
       status: status ?? this.status,
       user: user ?? this.user,
-      errorMessage: errorMessage ?? this.errorMessage,
+      errorMessage: identical(errorMessage, _kClearError)
+          ? this.errorMessage
+          : errorMessage as String?,
     );
   }
 
