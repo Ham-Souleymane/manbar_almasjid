@@ -11,6 +11,7 @@ import '../../../core/providers/locale_provider.dart';
 import '../../auth/application/auth_controller.dart';
 import '../../registration/data/registration_repository.dart';
 import '../../registration/domain/imam_model.dart';
+import '../../questions/presentation/widgets/onboarding_fields_sheet.dart';
 
 class ProfileSettingsScreen extends ConsumerStatefulWidget {
   const ProfileSettingsScreen({super.key});
@@ -23,8 +24,11 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
   late TextEditingController _phoneController;
+  late TextEditingController _bioController;
+  late TextEditingController _responseTimeController;
 
   bool _isSaving = false;
+  bool _isSavingAskSettings = false;
   bool _isUploadingPhoto = false;
   String? _uploadedPhotoUrl;
 
@@ -35,6 +39,8 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
     super.initState();
     _nameController = TextEditingController();
     _phoneController = TextEditingController();
+    _bioController = TextEditingController();
+    _responseTimeController = TextEditingController();
 
     // Initialize controller values from current profile state
     Future.microtask(() {
@@ -42,6 +48,8 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
       if (imam != null) {
         _nameController.text = imam.fullName;
         _phoneController.text = imam.phone;
+        _bioController.text = imam.bio;
+        _responseTimeController.text = imam.responseTime;
       }
     });
   }
@@ -50,6 +58,8 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
+    _bioController.dispose();
+    _responseTimeController.dispose();
     super.dispose();
   }
 
@@ -111,6 +121,60 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
       if (mounted) _showSnackBar('${context.l10n.error}: $e', color: Colors.red);
     } finally {
       if (mounted) setState(() => _isSaving = false);
+    }
+  }
+
+  Future<void> _saveAskSettings(ImamModel imam) async {
+    setState(() => _isSavingAskSettings = true);
+    try {
+      final updatedImam = imam.copyWith(
+        bio: _bioController.text.trim(),
+        responseTime: _responseTimeController.text.trim(),
+      );
+
+      final batch = FirebaseFirestore.instance.batch();
+      batch.set(
+        FirebaseFirestore.instance.collection('imams').doc(imam.id),
+        updatedImam.toFirestore(),
+        SetOptions(merge: true),
+      );
+
+      if (imam.mosqueId != null && imam.mosqueId!.isNotEmpty) {
+        batch.update(
+          FirebaseFirestore.instance.collection('mosques').doc(imam.mosqueId!),
+          {'acceptingQuestions': imam.acceptingQuestions},
+        );
+      }
+
+      await batch.commit();
+
+      if (mounted) _showSnackBar(context.l10n.profileSaved);
+    } catch (e) {
+      if (mounted) _showSnackBar('${context.l10n.error}: $e', color: Colors.red);
+    } finally {
+      if (mounted) setState(() => _isSavingAskSettings = false);
+    }
+  }
+
+  Future<void> _toggleQuestionsAvailability(ImamModel imam, bool value) async {
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      batch.update(
+        FirebaseFirestore.instance.collection('imams').doc(imam.id),
+        {'acceptingQuestions': value},
+      );
+
+      if (imam.mosqueId != null && imam.mosqueId!.isNotEmpty) {
+        batch.update(
+          FirebaseFirestore.instance.collection('mosques').doc(imam.mosqueId!),
+          {'acceptingQuestions': value},
+        );
+      }
+
+      await batch.commit();
+      if (mounted) _showSnackBar(context.l10n.preferencesUpdated);
+    } catch (e) {
+      if (mounted) _showSnackBar('${context.l10n.error}: $e', color: Colors.red);
     }
   }
 
@@ -227,12 +291,27 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
       appBar: AppBar(
         title: Text(
           l10n.profileSettings,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: Color(0xFF111827),
+          ),
         ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
+        iconTheme: const IconThemeData(color: Color(0xFF111827)),
         elevation: 0.5,
         centerTitle: true,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_rounded,
+                  color: Color(0xFF111827),
+                  size: 20,
+                ),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
       ),
       body: imamAsync.when(
         loading: () => const Center(child: CircularProgressIndicator(color: Color(0xFF0F766E))),
@@ -389,6 +468,143 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
                                       ? const CircularProgressIndicator(color: Colors.white)
                                       : Text(l10n.saveChanges,
                                           style: const TextStyle(fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+
+                      // ── Ask Sheikh Feature Settings Section ──────────────────
+                      Text(
+                        l10n.askFeatureSettings,
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
+                      ),
+                      const SizedBox(height: 10),
+                      Card(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        color: Colors.white,
+                        elevation: 0.5,
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Availability Switch
+                              SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  l10n.acceptingQuestions,
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Text(
+                                  l10n.acceptingQuestionsSubtitle,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                activeThumbColor: const Color(0xFF0F766E),
+                                value: imam.acceptingQuestions,
+                                onChanged: (val) => _toggleQuestionsAvailability(imam, val),
+                              ),
+                              const Divider(height: 20),
+                              // Specialties Selector
+                              ListTile(
+                                contentPadding: EdgeInsets.zero,
+                                leading: const Icon(Icons.school_rounded, color: Color(0xFF003527)),
+                                title: Text(
+                                  l10n.imamSpecialties,
+                                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                                ),
+                                subtitle: Text(
+                                  imam.specialties.isNotEmpty
+                                      ? imam.specialties.join(' • ')
+                                      : l10n.imamSpecialtiesSubtitle,
+                                  style: const TextStyle(fontSize: 12),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                trailing: const Icon(Icons.chevron_right_rounded),
+                                onTap: () {
+                                  showModalBottomSheet(
+                                    context: context,
+                                    isScrollControlled: true,
+                                    shape: const RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                                    ),
+                                    builder: (_) => OnboardingFieldsSheet(
+                                      imamId: imam.id,
+                                      initialFields: imam.specialties,
+                                    ),
+                                  );
+                                },
+                              ),
+                              const Divider(height: 20),
+                              // Bio / Credentials
+                              Text(
+                                l10n.imamBio,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _bioController,
+                                maxLines: 2,
+                                decoration: InputDecoration(
+                                  hintText: l10n.imamBioHint,
+                                  hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              // Response Time / Availability
+                              Text(
+                                l10n.responseTime,
+                                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
+                              ),
+                              const SizedBox(height: 8),
+                              TextFormField(
+                                controller: _responseTimeController,
+                                decoration: InputDecoration(
+                                  hintText: l10n.responseTimeHint,
+                                  hintStyle: const TextStyle(fontSize: 12, color: Colors.grey),
+                                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                                  contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                ),
+                              ),
+                              const SizedBox(height: 12),
+                              // Allow Private Questions
+                              SwitchListTile(
+                                contentPadding: EdgeInsets.zero,
+                                title: Text(
+                                  l10n.allowPrivateQuestions,
+                                  style: const TextStyle(fontSize: 14),
+                                ),
+                                subtitle: Text(
+                                  l10n.allowPrivateQuestionsSubtitle,
+                                  style: const TextStyle(fontSize: 12),
+                                ),
+                                activeThumbColor: const Color(0xFFD97706),
+                                value: imam.allowPrivateQuestions,
+                                onChanged: (val) => _togglePreference(imam, 'allowPrivateQuestions', val),
+                              ),
+                              const SizedBox(height: 16),
+                              SizedBox(
+                                width: double.infinity,
+                                height: 44,
+                                child: ElevatedButton(
+                                  onPressed: _isSavingAskSettings ? null : () => _saveAskSettings(imam),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF003527),
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  child: _isSavingAskSettings
+                                      ? const CircularProgressIndicator(color: Colors.white)
+                                      : Text(
+                                          l10n.saveChanges,
+                                          style: const TextStyle(fontWeight: FontWeight.bold),
+                                        ),
                                 ),
                               ),
                             ],
@@ -587,3 +803,4 @@ class _LangChip extends StatelessWidget {
     );
   }
 }
+

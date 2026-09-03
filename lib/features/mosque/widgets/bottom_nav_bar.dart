@@ -5,7 +5,7 @@ class ManbarBottomNavBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onTap;
 
-  /// When true, an extra "لوحة الإدارة" tab is appended at the end.
+  /// When true, an extra Admin tab is appended at the end.
   final bool showAdmin;
 
   const ManbarBottomNavBar({
@@ -24,8 +24,12 @@ class ManbarBottomNavBar extends StatelessWidget {
         label: l10n.navHome,
       ),
       BottomNavigationBarItem(
-        icon: const Icon(Icons.article_rounded),
-        label: l10n.navPosts,
+        icon: const Icon(Icons.question_answer_rounded),
+        label: l10n.navQuestions,
+      ),
+      BottomNavigationBarItem(
+        icon: const Icon(Icons.forum_rounded),
+        label: l10n.navForum,
       ),
       BottomNavigationBarItem(
         icon: const Icon(Icons.mosque_rounded),
@@ -46,7 +50,7 @@ class ManbarBottomNavBar extends StatelessWidget {
       currentIndex: currentIndex.clamp(0, items.length - 1),
       onTap: onTap,
       type: BottomNavigationBarType.fixed,
-      selectedItemColor: const Color(0xFF0F766E),
+      selectedItemColor: const Color(0xFF003527),
       unselectedItemColor: Colors.grey,
       showUnselectedLabels: true,
       items: items,

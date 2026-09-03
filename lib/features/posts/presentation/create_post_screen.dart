@@ -9,6 +9,7 @@ import 'package:intl/intl.dart' as intl;
 import '../../../core/l10n/app_localizations.dart';
 import '../../registration/data/registration_repository.dart';
 import '../../registration/domain/imam_status.dart';
+import '../../suggestions/presentation/suggest_to_admin_sheet.dart';
 import '../data/post_model.dart';
 import '../data/posts_repository.dart';
 
@@ -255,12 +256,57 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
       appBar: AppBar(
         title: Text(
           l10n.createPost,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: Color(0xFF111827),
+          ),
         ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
+        iconTheme: const IconThemeData(color: Color(0xFF111827)),
         elevation: 0.5,
         centerTitle: true,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_rounded,
+                  color: Color(0xFF111827),
+                  size: 20,
+                ),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
+        actions: [
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 12),
+            child: TextButton.icon(
+              onPressed: () => showSuggestToAdminSheet(context),
+              icon: const Icon(
+                Icons.lightbulb_rounded,
+                size: 18,
+                color: Color(0xFF0F766E),
+              ),
+              label: const Text(
+                'إقترح للإدارة',
+                style: TextStyle(
+                  color: Color(0xFF0F766E),
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                ),
+              ),
+              style: TextButton.styleFrom(
+                backgroundColor:
+                    const Color(0xFF0F766E).withValues(alpha: 0.1),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(20),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
       body: Stack(
         children: [

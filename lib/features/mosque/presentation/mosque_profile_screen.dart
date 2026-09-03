@@ -1,5 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../data/mosque_model.dart';
@@ -103,6 +105,7 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
                                 'name': nameController.text.trim(),
                                 'imamName': imamNameController.text.trim(),
                                 'imamPhone': imamPhoneController.text.trim(),
+                                'contactPhone': imamPhoneController.text.trim(),
                                 'city': cityController.text.trim(),
                                 'address': addressController.text.trim(),
                                 'description': descController.text.trim(),
@@ -169,10 +172,24 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
       body: StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
         stream: _mosqueRef.snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(
+                  '${l10n.error}: ${snapshot.error}',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
           }
-          if (!snapshot.data!.exists) {
+          if (snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+            );
+          }
+          if (!snapshot.hasData || !snapshot.data!.exists) {
             return Center(child: Text(l10n.mosqueDataNotFound));
           }
 
@@ -266,7 +283,7 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
                                           : mosque.address,
                                       style: TextStyle(
                                         color:
-                                        Colors.white.withValues(alpha: 0.9),
+                                            Colors.white.withValues(alpha: 0.9),
                                         fontSize: 13,
                                       ),
                                       overflow: TextOverflow.ellipsis,
@@ -282,7 +299,8 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
                   ),
                   actions: [
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
                       child: TextButton.icon(
                         onPressed: () => _openEditSheet(mosque),
                         icon: const Icon(Icons.edit_rounded,
@@ -292,7 +310,8 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
                           style: const TextStyle(color: Colors.white),
                         ),
                         style: TextButton.styleFrom(
-                          backgroundColor: Colors.white.withValues(alpha: 0.18),
+                          backgroundColor:
+                              Colors.white.withValues(alpha: 0.18),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(20),
                           ),
@@ -306,9 +325,23 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
                   delegate: _TabBarDelegate(
                     TabBar(
                       controller: _tabController,
+                      isScrollable: true,
+                      tabAlignment: TabAlignment.start,
                       labelColor: const Color(0xFF0F766E),
-                      unselectedLabelColor: Colors.black54,
+                      unselectedLabelColor: const Color(0xFF6B7280),
                       indicatorColor: const Color(0xFF0F766E),
+                      indicatorWeight: 3,
+                      indicatorSize: TabBarIndicatorSize.label,
+                      labelPadding: const EdgeInsets.symmetric(
+                          horizontal: 18, vertical: 4),
+                      labelStyle: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                      unselectedLabelStyle: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        fontSize: 14,
+                      ),
                       tabs: [
                         Tab(text: l10n.about),
                         Tab(text: l10n.posts),
@@ -339,10 +372,16 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _infoTile(Icons.person_rounded, l10n.fullName,
-            mosque.imamName.isNotEmpty ? mosque.imamName : l10n.methodUnset),
-        _infoTile(Icons.phone_rounded, l10n.contactPhone,
-            mosque.imamPhone.isNotEmpty ? mosque.imamPhone : l10n.methodUnset),
+        _infoTile(
+          Icons.person_rounded,
+          l10n.fullName,
+          mosque.imamName.isNotEmpty ? mosque.imamName : l10n.methodUnset,
+        ),
+        _infoTile(
+          Icons.phone_rounded,
+          l10n.contactPhone,
+          mosque.imamPhone.isNotEmpty ? mosque.imamPhone : l10n.methodUnset,
+        ),
         const SizedBox(height: 8),
         Container(
           width: double.infinity,
@@ -350,13 +389,24 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.03),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
+              ),
+            ],
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 l10n.description,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 15,
+                  color: Color(0xFF111827),
+                ),
               ),
               const SizedBox(height: 8),
               Text(
@@ -383,6 +433,13 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Row(
         children: [
@@ -395,16 +452,25 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
             child: Icon(icon, color: const Color(0xFF0F766E), size: 18),
           ),
           const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(label,
-                  style: const TextStyle(fontSize: 12, color: Colors.black45)),
-              const SizedBox(height: 2),
-              Text(value,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(fontSize: 12, color: Colors.black45),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  value,
                   style: const TextStyle(
-                      fontSize: 14, fontWeight: FontWeight.w600)),
-            ],
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF1F2937),
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -416,29 +482,160 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
       stream: FirebaseFirestore.instance
           .collection('posts')
           .where('mosqueId', isEqualTo: widget.mosqueId)
-          .orderBy('createdAt', descending: true)
           .snapshots(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.error_outline_rounded,
+                      size: 44, color: Colors.black38),
+                  const SizedBox(height: 12),
+                  Text(
+                    '${l10n.error}: ${snapshot.error}',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
-        final docs = snapshot.data!.docs;
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+          );
+        }
+
+        final docs = (snapshot.data?.docs ?? []).toList();
+        // Sort posts descending by createdAt in memory to avoid missing composite index errors
+        docs.sort((a, b) {
+          final tA = a.data()['createdAt'];
+          final tB = b.data()['createdAt'];
+          final dateA = tA is Timestamp
+              ? tA.toDate()
+              : DateTime.fromMillisecondsSinceEpoch(0);
+          final dateB = tB is Timestamp
+              ? tB.toDate()
+              : DateTime.fromMillisecondsSinceEpoch(0);
+          return dateB.compareTo(dateA);
+        });
+
         if (docs.isEmpty) {
-          return Center(child: Text(l10n.noPostsYetMosque));
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.article_outlined,
+                      size: 52, color: Colors.grey.shade400),
+                  const SizedBox(height: 12),
+                  Text(
+                    l10n.noPostsYetMosque,
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
+
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: docs.length,
           itemBuilder: (context, index) {
-            final post = docs[index].data();
+            final postData = docs[index].data();
+            final text = postData['text'] as String? ?? '';
+            final category = postData['category'] as String? ?? '';
+            final mediaUrls = List<String>.from(postData['mediaUrls'] ?? []);
+            final createdAt = postData['createdAt'] is Timestamp
+                ? (postData['createdAt'] as Timestamp).toDate()
+                : null;
+
             return Container(
-              margin: const EdgeInsets.only(bottom: 12),
-              padding: const EdgeInsets.all(14),
+              margin: const EdgeInsets.only(bottom: 14),
+              padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-              child: Text(post['text'] ?? ''),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (category.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F766E).withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        category,
+                        style: const TextStyle(
+                          color: Color(0xFF0F766E),
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                  ],
+                  if (text.isNotEmpty)
+                    Text(
+                      text,
+                      style: const TextStyle(
+                        fontSize: 14,
+                        height: 1.6,
+                        color: Color(0xFF1F2937),
+                      ),
+                    ),
+                  if (mediaUrls.isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: Image.network(
+                        mediaUrls.first,
+                        height: 190,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
+                  if (createdAt != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        const Icon(Icons.access_time_rounded,
+                            size: 13, color: Colors.black38),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${createdAt.day}/${createdAt.month}/${createdAt.year}',
+                          style: const TextStyle(
+                              fontSize: 11, color: Colors.black38),
+                        ),
+                      ],
+                    ),
+                  ],
+                ],
+              ),
             );
           },
         );
@@ -447,63 +644,230 @@ class _MosqueProfileScreenState extends State<MosqueProfileScreen>
   }
 
   Widget _buildPrayerTimesTab(AppLocalizations l10n) {
+    final now = DateTime.now();
+    final todayDate =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
-      stream: _mosqueRef.collection('prayerTimes').doc('today').snapshots(),
+      stream: _mosqueRef.collection('prayerTimes').doc(todayDate).snapshots(),
       builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Text(
+                '${l10n.error}: ${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.black54),
+              ),
+            ),
+          );
+        }
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Center(
+            child: CircularProgressIndicator(color: Color(0xFF0F766E)),
+          );
+        }
+
         final data = snapshot.data?.data();
-        final prayers = {
-          l10n.fajr: data?['fajr'],
-          l10n.dhuhr: data?['dhuhr'],
-          l10n.asr: data?['asr'],
-          l10n.maghrib: data?['maghrib'],
-          l10n.isha: data?['isha'],
-        };
+        final fajr =
+            (data?['fajrOverride'] ?? data?['fajr'] ?? '--:--').toString();
+        final dhuhr =
+            (data?['dhuhrOverride'] ?? data?['dhuhr'] ?? '--:--').toString();
+        final asr =
+            (data?['asrOverride'] ?? data?['asr'] ?? '--:--').toString();
+        final maghrib =
+            (data?['maghribOverride'] ?? data?['maghrib'] ?? '--:--')
+                .toString();
+        final isha =
+            (data?['ishaOverride'] ?? data?['isha'] ?? '--:--').toString();
+        final jumua = data?['jumuaPrayerTime'] ?? data?['jumuaKhutbahTime'];
+
+        final prayers = [
+          (name: l10n.fajr, time: fajr, icon: Icons.wb_twilight_rounded),
+          (name: l10n.dhuhr, time: dhuhr, icon: Icons.wb_sunny_rounded),
+          (name: l10n.asr, time: asr, icon: Icons.sunny_snowing),
+          (name: l10n.maghrib, time: maghrib, icon: Icons.nightlight_round),
+          (name: l10n.isha, time: isha, icon: Icons.bedtime_rounded),
+          if (jumua != null && jumua.toString().isNotEmpty)
+            (
+              name: l10n.jumuah,
+              time: jumua.toString(),
+              icon: Icons.mosque_rounded
+            ),
+        ];
+
         return ListView(
           padding: const EdgeInsets.all(16),
-          children: prayers.entries.map((e) {
-            return Container(
-              margin: const EdgeInsets.only(bottom: 10),
+          children: [
+            Container(
               padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              margin: const EdgeInsets.only(bottom: 14),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: const Color(0xFF0F766E).withValues(alpha: 0.08),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(e.key,
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text(e.value ?? '--:--',
-                      style: const TextStyle(color: Color(0xFF0F766E))),
+                  const Icon(Icons.calendar_month_rounded,
+                      size: 18, color: Color(0xFF0F766E)),
+                  const SizedBox(width: 8),
+                  Text(
+                    todayDate,
+                    style: const TextStyle(
+                      color: Color(0xFF0F766E),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    data != null ? l10n.prayerTimes : l10n.methodUnset,
+                    style: const TextStyle(
+                      color: Colors.black45,
+                      fontSize: 12,
+                    ),
+                  ),
                 ],
               ),
-            );
-          }).toList(),
+            ),
+            ...prayers.map((e) {
+              final hasTime = e.time.isNotEmpty && e.time != '--:--';
+              return Container(
+                margin: const EdgeInsets.only(bottom: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF0F766E).withValues(alpha: 0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(e.icon,
+                          size: 18, color: const Color(0xFF0F766E)),
+                    ),
+                    const SizedBox(width: 12),
+                    Text(
+                      e.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 15,
+                        color: Color(0xFF111827),
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      e.time,
+                      style: TextStyle(
+                        color: hasTime
+                            ? const Color(0xFF0F766E)
+                            : Colors.black38,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+          ],
         );
       },
     );
   }
 
   Widget _buildLocationTab(MosqueModel mosque, AppLocalizations l10n) {
+    final hasGeo = mosque.geopoint != null &&
+        mosque.geopoint!.latitude != 0 &&
+        mosque.geopoint!.longitude != 0;
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        Container(
-          height: 180,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE5F3F1),
-            borderRadius: BorderRadius.circular(16),
+        if (hasGeo)
+          Container(
+            height: 200,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border:
+                  Border.all(color: Colors.black.withValues(alpha: 0.08)),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(16),
+              child: FlutterMap(
+                options: MapOptions(
+                  initialCenter: LatLng(
+                    mosque.geopoint!.latitude,
+                    mosque.geopoint!.longitude,
+                  ),
+                  initialZoom: 15,
+                ),
+                children: [
+                  TileLayer(
+                    urlTemplate:
+                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                    userAgentPackageName: 'com.manbar.manbarAlmasjid',
+                  ),
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: LatLng(
+                          mosque.geopoint!.latitude,
+                          mosque.geopoint!.longitude,
+                        ),
+                        width: 40,
+                        height: 40,
+                        child: const Icon(
+                          Icons.location_on,
+                          color: Color(0xFF0F766E),
+                          size: 40,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          Container(
+            height: 180,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: const Color(0xFFE5F3F1),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(
+              child: Icon(Icons.map_rounded,
+                  size: 48, color: Color(0xFF0F766E)),
+            ),
           ),
-          child: const Center(
-            child: Icon(Icons.map_rounded, size: 40, color: Color(0xFF0F766E)),
-          ),
+        _infoTile(
+          Icons.location_city_rounded,
+          l10n.city,
+          mosque.city.isNotEmpty ? mosque.city : l10n.methodUnset,
         ),
-        const SizedBox(height: 12),
-        _infoTile(Icons.location_city_rounded, l10n.city,
-            mosque.city.isNotEmpty ? mosque.city : l10n.methodUnset),
-        _infoTile(Icons.place_rounded, l10n.detailedAddress,
-            mosque.address.isNotEmpty ? mosque.address : l10n.methodUnset),
+        _infoTile(
+          Icons.place_rounded,
+          l10n.detailedAddress,
+          mosque.address.isNotEmpty ? mosque.address : l10n.methodUnset,
+        ),
       ],
     );
   }
@@ -523,9 +887,20 @@ class _TabBarDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(
       BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return Container(color: Colors.white, child: tabBar);
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        border: Border(
+          bottom: BorderSide(
+            color: Color(0xFFE5E7EB),
+            width: 1,
+          ),
+        ),
+      ),
+      child: tabBar,
+    );
   }
 
   @override
-  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) => false;
+  bool shouldRebuild(covariant _TabBarDelegate oldDelegate) => true;
 }

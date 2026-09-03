@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -7,8 +8,17 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'core/l10n/app_localizations.dart';
 import 'core/providers/locale_provider.dart';
 import 'core/router/app_router.dart';
+import 'core/services/notification_service.dart';
 import 'core/theme/app_theme.dart';
 import 'firebase_options.dart';
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  debugPrint('Background FCM message received: ${message.messageId}');
+}
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,17 +31,14 @@ Future<void> main() async {
     systemNavigationBarIconBrightness: Brightness.dark,
   ));
 
-  // Initialize Firebase with defaults (uses instructions/placeholders or auto-configured ones)
+  // Initialize Firebase with defaults
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   } catch (e) {
     debugPrint('Firebase initialization warning: $e');
-    debugPrint(
-      'Make sure to set up your Firebase project and run "flutterfire configure" '
-      'or add your config files as specified in FIREBASE_SETUP.md.',
-    );
   }
 
   runApp(
@@ -52,8 +59,11 @@ class _ManbarAlmasjidAppState extends ConsumerState<ManbarAlmasjidApp> {
   @override
   void initState() {
     super.initState();
-    // Restore persisted locale on startup
-    Future.microtask(() => ref.read(localeProvider.notifier).load());
+    // Restore persisted locale and initialize notifications on startup
+    Future.microtask(() {
+      ref.read(localeProvider.notifier).load();
+      ref.read(notificationServiceProvider).initialize();
+    });
   }
 
   @override

@@ -2,76 +2,61 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // ── Helper functions ──────────────────────────────────────
     function isSignedIn() {
       return request.auth != null;
     }
 
-    /// True for any signed-in user, including anonymous (guest) sessions.
     function isAuthenticated() {
       return isSignedIn();
     }
 
-    /// True only for non-anonymous (real account) users.
     function isRealUser() {
       return isSignedIn()
         && request.auth.token.firebase.sign_in_provider != 'anonymous';
     }
 
-    /// True when the request is from the document's owner.
     function isOwner(uid) {
       return isSignedIn() && request.auth.uid == uid;
     }
 
-    /// True for users with the Firebase Auth custom claim `admin: true`.
     function isAdmin() {
       return isSignedIn() && request.auth.token.get('admin', false) == true;
     }
 
-
-    // ── users/{userId} ────────────────────────────────────────
-    // Worshippers/imams can read/write their own profile.
-    // Only real (non-anonymous) users can write — guests get a doc created
-    // server-side (via the app) but should not be able to corrupt it.
     match /users/{userId} {
-      allow read: if isOwner(userId) || isAdmin();
+      allow read: if isAuthenticated();
       allow create: if isSignedIn() && request.auth.uid == userId;
       allow update: if (isRealUser() && request.auth.uid == userId) || isAdmin();
-      allow delete: if false; // soft-delete only via Cloud Functions
+      allow delete: if false;
 
-      // ── followedMosques (per user) ────────────────────────
       match /followedMosques/{mosqueId} {
         allow read: if isOwner(userId);
         allow write: if isRealUser() && request.auth.uid == userId;
       }
 
-      // ── savedMosques (per user) ────────────────────────────
       match /savedMosques/{mosqueId} {
         allow read: if isOwner(userId);
         allow write: if isRealUser() && request.auth.uid == userId;
       }
 
-      // ── savedPosts (per user) ──────────────────────────────
       match /savedPosts/{postId} {
         allow read: if isOwner(userId);
         allow write: if isRealUser() && request.auth.uid == userId;
       }
 
-      // ── followedImams (per user) ───────────────────────────
       match /followedImams/{imamId} {
         allow read: if isOwner(userId);
         allow write: if isRealUser() && request.auth.uid == userId;
       }
     }
 
-
-    // ── Imam profiles ─────────────────────────────────────────
     match /imams/{imamId} {
-      allow read:  if isAuthenticated() && (request.auth.uid == imamId || isAdmin());
+      allow read:  if isAuthenticated();
       allow write: if isAuthenticated() && (request.auth.uid == imamId || isAdmin());
 
       match /notifications/{notifId} {
-        allow read, write: if isAuthenticated() && request.auth.uid == imamId;
+        allow read, update, delete: if isAuthenticated() && (request.auth.uid == imamId || isAdmin());
+        allow create: if isAuthenticated();
       }
 
       match /followers/{userId} {
@@ -80,19 +65,26 @@ service cloud.firestore {
       }
     }
 
-
-    // ── Mosque documents ──────────────────────────────────────
     match /mosques/{mosqueId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated();
-      allow update, delete: if isAuthenticated()
-        && (resource.data.imamId == request.auth.uid || mosqueId == request.auth.uid || isAdmin());
+      allow update: if isAuthenticated() && (
+        resource.data.get('imamId', '') == request.auth.uid
+        || mosqueId == request.auth.uid
+        || resource.data.get('imamId', '') == ''
+        || resource.data.get('hasImam', false) == false
+        || isAdmin()
+      );
+      allow delete: if isAuthenticated() && (
+        resource.data.get('imamId', '') == request.auth.uid
+        || mosqueId == request.auth.uid
+        || isAdmin()
+      );
 
       match /stats/{document} {
         allow read, write: if isAuthenticated();
       }
 
-      // Nested feed path used by the mosque screen.
       match /posts/{document} {
         allow read: if isAuthenticated();
         allow write: if isAuthenticated();
@@ -103,22 +95,28 @@ service cloud.firestore {
         allow write: if isAuthenticated();
       }
 
-      // ── followers ───────────────────────────────────────────
       match /followers/{userId} {
         allow read: if isAuthenticated();
         allow write: if isRealUser() && request.auth.uid == userId;
       }
     }
 
-
-    // ── Root-level prayerTimes (e.g. global/aggregated queries) ─
     match /prayerTimes/{docId} {
       allow read: if isAuthenticated();
       allow write: if isAdmin();
     }
 
+    match /questions/{questionId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated();
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && (
+        resource.data.userId == request.auth.uid
+        || resource.data.imamId == request.auth.uid
+        || isAdmin()
+      );
+    }
 
-    // ── Root posts collection ─────────────────────────────────
     match /posts/{postId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated()
@@ -126,13 +124,23 @@ service cloud.firestore {
         && (!('likeCount' in request.resource.data) || request.resource.data.likeCount == 0)
         && (!('commentCount' in request.resource.data) || request.resource.data.commentCount == 0);
       allow update: if isAuthenticated()
-        && resource.data.imamId == request.auth.uid
-        && request.resource.data.likeCount == resource.data.likeCount
-        && request.resource.data.commentCount == resource.data.commentCount;
+        && (
+          (resource.data.imamId == request.auth.uid
+           && request.resource.data.get('likeCount', 0) == resource.data.get('likeCount', 0)
+           && request.resource.data.get('commentCount', 0) == resource.data.get('commentCount', 0))
+          ||
+          (isRealUser()
+           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likeCount', 'commentCount'])
+           && (request.resource.data.get('likeCount', 0) == resource.data.get('likeCount', 0) + 1
+               || request.resource.data.get('likeCount', 0) == resource.data.get('likeCount', 0) - 1
+               || request.resource.data.get('likeCount', 0) == resource.data.get('likeCount', 0))
+           && (request.resource.data.get('commentCount', 0) == resource.data.get('commentCount', 0) + 1
+               || request.resource.data.get('commentCount', 0) == resource.data.get('commentCount', 0))
+          )
+        );
       allow delete: if isAuthenticated()
         && (resource.data.imamId == request.auth.uid || isAdmin());
 
-      // comments sub-collection — real users only, with length validation
       match /comments/{commentId} {
         allow read: if isAuthenticated();
         allow create: if isRealUser()
@@ -150,7 +158,6 @@ service cloud.firestore {
         );
       }
 
-      // likes sub-collection — real users only
       match /likes/{userId} {
         allow read: if isAuthenticated();
         allow create, delete: if isRealUser() && request.auth.uid == userId;
@@ -158,15 +165,53 @@ service cloud.firestore {
       }
     }
 
-
-    // ── Reports collection (admin-managed) ───────────────────
     match /reports/{reportId} {
       allow create: if isAuthenticated();
       allow read, update, delete: if isAdmin();
     }
 
+    // ── Imam Forum: Specialized Group Chats ──────────────────────
+    match /imam_groups/{groupId} {
+      // Anyone can read group metadata
+      allow read: if true;
+      // Only admin can create or delete groups
+      allow create, delete: if isAdmin();
+      // Admin can update freely; verified imams can only update memberIds and membersCount (join/leave)
+      allow update: if isAdmin()
+        || (isRealUser()
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['memberIds', 'membersCount', 'lastActivity', 'lastMessageText', 'lastMessageSender']));
 
-    // ── Deny everything else by default ───────────────────────
+      // Messages subcollection: only group members can read/write
+      match /messages/{messageId} {
+        allow read: if isAuthenticated()
+          && (isAdmin() || request.auth.uid in get(/databases/$(database)/documents/imam_groups/$(groupId)).data.memberIds);
+        allow create: if isRealUser()
+          && request.auth.uid in get(/databases/$(database)/documents/imam_groups/$(groupId)).data.memberIds
+          && request.resource.data.senderId == request.auth.uid
+          && request.resource.data.text is string
+          && request.resource.data.text.size() <= 2000;
+        // Sender can soft-delete their own messages; admin can delete any
+        allow update: if isRealUser()
+          && (resource.data.senderId == request.auth.uid || isAdmin())
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['isDeleted', 'text', 'reactions']);
+        allow delete: if isAdmin();
+      }
+    }
+
+    // ── Suggestions (إقترح للإدارة) ──────────────────────────────
+    match /suggestions/{suggestionId} {
+      // Authenticated users (imams/scholars) can create suggestions
+      allow create: if isAuthenticated()
+        && request.resource.data.imamId == request.auth.uid;
+      
+      // Imams can read their own suggestions, admins can read all suggestions
+      allow read: if isAuthenticated()
+        && (resource.data.imamId == request.auth.uid || isAdmin());
+      
+      // Only admins can update (status, admin response) or delete suggestions
+      allow update, delete: if isAdmin();
+    }
+
     match /{document=**} {
       allow read, write: if false;
     }

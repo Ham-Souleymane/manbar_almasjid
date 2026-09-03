@@ -6,6 +6,7 @@ import '../../posts/data/comment_model.dart';
 import '../../posts/data/post_model.dart';
 import '../../registration/domain/imam_model.dart';
 import '../../registration/domain/mosque_model.dart';
+import '../../suggestions/data/suggestion_model.dart';
 import 'report_model.dart';
 
 class AdminRepository {
@@ -99,33 +100,96 @@ class AdminRepository {
     } else {
       batch.delete(_db.collection('posts').doc(report.postId));
     }
-    // Mark report as reviewed
+    // Mark report as resolved
     batch.update(_db.collection('reports').doc(report.id),
-        {'status': 'reviewed'});
+        {'status': 'resolved'});
     await batch.commit();
   }
 
-  // ── All Mosques ───────────────────────────────────────────
+  // ── Mosques ────────────────────────────────────────────────
   Stream<List<MosqueModel>> watchAllMosques() {
-    return _db
-        .collection('mosques')
-        .orderBy('name')
-        .snapshots()
-        .map((snap) => snap.docs
-            .map((doc) => MosqueModel.fromFirestore(
-                doc as DocumentSnapshot<Map<String, dynamic>>))
-            .toList());
+    return _db.collection('mosques').snapshots().map((snap) => snap.docs
+        .map((doc) => MosqueModel.fromFirestore(
+            doc as DocumentSnapshot<Map<String, dynamic>>))
+        .toList());
   }
 
-  Future<void> revokeVerification(String mosqueId) async {
+  Future<void> toggleMosqueVerification(
+      String mosqueId, bool currentVerified) async {
     await _db
         .collection('mosques')
         .doc(mosqueId)
-        .update({'verified': false});
+        .update({'verified': !currentVerified});
   }
 
   Future<void> deleteMosqueAsAdmin(String mosqueId) async {
-    await _db.collection('mosques').doc(mosqueId).delete();
+    final mosqueDoc = await _db.collection('mosques').doc(mosqueId).get();
+    final imamId = mosqueDoc.data()?['imamId'] as String?;
+
+    final batch = _db.batch();
+    if (imamId != null && imamId.isNotEmpty) {
+      batch.update(_db.collection('imams').doc(imamId), {
+        'mosqueId': FieldValue.delete(),
+      });
+      batch.set(_db.collection('users').doc(imamId), {
+        'mosqueId': FieldValue.delete(),
+      }, SetOptions(merge: true));
+    }
+    batch.delete(_db.collection('mosques').doc(mosqueId));
+    await batch.commit();
+  }
+
+  // ── Suggestions ────────────────────────────────────────────
+  Future<void> submitSuggestion(SuggestionModel suggestion) async {
+    final docRef = _db.collection('suggestions').doc();
+    await docRef.set(suggestion.toFirestore());
+  }
+
+  Stream<List<SuggestionModel>> watchSuggestions({String? statusFilter}) {
+    Query<Map<String, dynamic>> query = _db
+        .collection('suggestions')
+        .orderBy('createdAt', descending: true);
+
+    if (statusFilter != null && statusFilter != 'all') {
+      query = query.where('status', isEqualTo: statusFilter);
+    }
+
+    return query.snapshots().map((snap) => snap.docs
+        .map((doc) => SuggestionModel.fromFirestore(
+            doc as DocumentSnapshot<Map<String, dynamic>>))
+        .toList());
+  }
+
+  Stream<List<SuggestionModel>> watchSuggestionsByImam(String imamId) {
+    if (imamId.isEmpty) return Stream.value([]);
+    return _db
+        .collection('suggestions')
+        .where('imamId', isEqualTo: imamId)
+        .snapshots()
+        .map((snap) {
+          final list = snap.docs
+              .map((doc) => SuggestionModel.fromFirestore(
+                  doc as DocumentSnapshot<Map<String, dynamic>>))
+              .toList();
+          list.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return list;
+        });
+  }
+
+  Future<void> updateSuggestionStatus(
+    String suggestionId,
+    String status, {
+    String? adminResponse,
+  }) async {
+    await _db.collection('suggestions').doc(suggestionId).update({
+      'status': status,
+      if (adminResponse != null) 'adminResponse': adminResponse,
+      if (adminResponse != null) 'respondedAt': Timestamp.now(),
+    });
+  }
+
+  Future<void> deleteSuggestion(String suggestionId) async {
+    await _db.collection('suggestions').doc(suggestionId).delete();
   }
 
   // ── Dashboard Stats ───────────────────────────────────────
@@ -143,12 +207,18 @@ class AdminRepository {
           .get(),
       _db.collection('mosques').count().get(),
       _db.collection('posts').count().get(),
+      _db
+          .collection('suggestions')
+          .where('status', isEqualTo: 'pending')
+          .count()
+          .get(),
     ]);
     return {
       'pendingImams': results[0].count ?? 0,
       'openReports': results[1].count ?? 0,
       'totalMosques': results[2].count ?? 0,
       'totalPosts': results[3].count ?? 0,
+      'pendingSuggestions': results[4].count ?? 0,
     };
   }
   // ── All Posts (admin) ─────────────────────────────────────
@@ -240,6 +310,23 @@ final allMosquesProvider = StreamProvider<List<MosqueModel>>((ref) {
   return ref.watch(adminRepositoryProvider).watchAllMosques();
 });
 
+final suggestionsProvider =
+    StreamProvider.family<List<SuggestionModel>, String?>((ref, statusFilter) {
+  final isAdmin = ref.watch(isAdminProvider).value ?? false;
+  if (!isAdmin) {
+    return const Stream.empty();
+  }
+  return ref
+      .watch(adminRepositoryProvider)
+      .watchSuggestions(statusFilter: statusFilter);
+});
+
 final adminStatsProvider = FutureProvider<Map<String, int>>((ref) {
   return ref.watch(adminRepositoryProvider).getDashboardStats();
 });
+
+final mySuggestionsProvider =
+    StreamProvider.family<List<SuggestionModel>, String>((ref, imamId) {
+  return ref.watch(adminRepositoryProvider).watchSuggestionsByImam(imamId);
+});
+

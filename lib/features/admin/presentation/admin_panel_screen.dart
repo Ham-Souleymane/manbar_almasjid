@@ -9,6 +9,8 @@ import 'all_mosques_screen.dart';
 import 'all_posts_screen.dart';
 import 'pending_imams_screen.dart';
 import 'reports_screen.dart';
+import 'suggestions_screen.dart';
+import '../../forum/presentation/admin_manage_groups_screen.dart';
 
 class AdminPanelScreen extends ConsumerStatefulWidget {
   const AdminPanelScreen({super.key});
@@ -23,8 +25,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
   final List<Widget> _screens = const [
     PendingImamsScreen(),
     ReportsScreen(),
+    SuggestionsScreen(),
     AllMosquesScreen(),
     AllPostsScreen(),
+    AdminManageGroupsScreen(),
   ];
 
   @override
@@ -63,6 +67,12 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
       backgroundColor: const Color(0xFFF4F6F8),
       appBar: AppBar(
         automaticallyImplyLeading: false,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_rounded),
+                onPressed: () => Navigator.of(context).pop(),
+              )
+            : null,
         backgroundColor: const Color(0xFF0F766E),
         foregroundColor: Colors.white,
         elevation: 0,
@@ -112,6 +122,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
             icon: const Icon(Icons.flag_rounded),
             label: l10n.reports,
           ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.lightbulb_rounded),
+            label: 'الاقتراحات',
+          ),
           BottomNavigationBarItem(
             icon: const Icon(Icons.mosque_rounded),
             label: l10n.mosques,
@@ -119,6 +133,10 @@ class _AdminPanelScreenState extends ConsumerState<AdminPanelScreen> {
           BottomNavigationBarItem(
             icon: const Icon(Icons.article_rounded),
             label: l10n.posts,
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.forum_rounded),
+            label: 'الملتقيات',
           ),
         ],
       ),
@@ -154,6 +172,11 @@ class _StatsRow extends ConsumerWidget {
                 value: s['openReports'] ?? 0,
                 icon: Icons.flag_rounded,
                 urgent: (s['openReports'] ?? 0) > 0),
+            _StatChip(
+                label: 'الاقتراحات',
+                value: s['pendingSuggestions'] ?? 0,
+                icon: Icons.lightbulb_rounded,
+                urgent: (s['pendingSuggestions'] ?? 0) > 0),
             _StatChip(
                 label: l10n.totalMosques,
                 value: s['totalMosques'] ?? 0,

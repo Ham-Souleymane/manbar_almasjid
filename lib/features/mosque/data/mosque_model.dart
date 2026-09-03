@@ -1,3 +1,5 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 class MosqueModel {
   final String id;
   final String name;
@@ -10,6 +12,8 @@ class MosqueModel {
   final String coverUrl;
   final bool isVerified;
   final String imamStatus; // "pending" | "approved" | "rejected"
+  final GeoPoint? geopoint;
+  final int? capacity;
 
   MosqueModel({
     required this.id,
@@ -23,6 +27,8 @@ class MosqueModel {
     required this.coverUrl,
     required this.isVerified,
     required this.imamStatus,
+    this.geopoint,
+    this.capacity,
   });
 
   factory MosqueModel.fromMap(String id, Map<String, dynamic> data) {
@@ -30,14 +36,16 @@ class MosqueModel {
       id: id,
       name: data['name'] ?? '',
       imamName: data['imamName'] ?? '',
-      imamPhone: data['imamPhone'] ?? '',
+      imamPhone: data['imamPhone'] ?? data['contactPhone'] ?? '',
       description: data['description'] ?? '',
       city: data['city'] ?? '',
       address: data['address'] ?? '',
-      logoUrl: data['logoUrl'] ?? '',
+      logoUrl: data['logoUrl'] ?? data['photo'] ?? '',
       coverUrl: data['coverUrl'] ?? '',
-      isVerified: data['isVerified'] ?? false,
+      isVerified: (data['isVerified'] as bool?) ?? (data['verified'] as bool?) ?? false,
       imamStatus: data['imamStatus'] ?? 'pending',
+      geopoint: data['geopoint'] as GeoPoint?,
+      capacity: data['capacity'] as int?,
     );
   }
 
@@ -53,6 +61,8 @@ class MosqueModel {
       'coverUrl': coverUrl,
       'isVerified': isVerified,
       'imamStatus': imamStatus,
+      if (geopoint != null) 'geopoint': geopoint,
+      if (capacity != null) 'capacity': capacity,
     };
   }
 }

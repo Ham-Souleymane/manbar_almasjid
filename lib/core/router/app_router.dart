@@ -6,11 +6,14 @@ import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
 import '../../features/registration/data/registration_repository.dart';
 import '../../features/registration/domain/imam_status.dart';
+import '../../features/registration/presentation/ask_feature_setup_screen.dart';
 import '../../features/registration/presentation/imam_registration_screen.dart';
 import '../../features/registration/presentation/mosque_registration_screen.dart';
 import '../../features/registration/presentation/under_review_screen.dart';
 import '../../features/mosque/presentation/home_dashboard_screen.dart';
 import '../../features/prayer_times/presentation/prayer_times_screen.dart';
+import '../../features/forum/presentation/discover_groups_screen.dart';
+import '../../features/forum/presentation/imam_group_chat_screen.dart';
 
 // ── Route names ───────────────────────────────────────────────
 abstract class AppRoutes {
@@ -18,9 +21,12 @@ abstract class AppRoutes {
   static const login = '/login';
   static const registerImam = '/register/imam';
   static const registerMosque = '/register/mosque';
+  static const askFeatureSetup = '/register/ask-setup';
   static const underReview = '/under-review';
   static const home = '/home';
   static const prayerTimes = '/prayer-times';
+  static const imamForum = '/imam-forum';
+  static const imamGroupChat = '/imam-forum/chat';
 }
 
 // ── Router provider ───────────────────────────────────────────
@@ -46,7 +52,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       final imam = imamState.asData?.value;
 
       const publicRoutes = {AppRoutes.splash, AppRoutes.login};
-      const registrationRoutes = {AppRoutes.registerImam, AppRoutes.registerMosque};
+      const registrationRoutes = {
+        AppRoutes.registerImam,
+        AppRoutes.registerMosque,
+        AppRoutes.askFeatureSetup,
+      };
 
       // Splash → resolve destination once auth + profile are loaded
       if (location == AppRoutes.splash) {
@@ -125,6 +135,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const MosqueRegistrationScreen(),
       ),
       GoRoute(
+        path: AppRoutes.askFeatureSetup,
+        name: 'askFeatureSetup',
+        builder: (context, state) => const AskFeatureSetupScreen(),
+      ),
+      GoRoute(
         path: AppRoutes.underReview,
         name: 'underReview',
         builder: (context, state) => const UnderReviewScreen(),
@@ -140,6 +155,19 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) {
           final mosqueId = state.extra as String? ?? '';
           return PrayerTimesScreen(mosqueId: mosqueId);
+        },
+      ),
+      GoRoute(
+        path: AppRoutes.imamForum,
+        name: 'imamForum',
+        builder: (context, state) => const DiscoverGroupsScreen(),
+      ),
+      GoRoute(
+        path: '${AppRoutes.imamGroupChat}/:groupId',
+        name: 'imamGroupChat',
+        builder: (context, state) {
+          final groupId = state.pathParameters['groupId'] ?? '';
+          return ImamGroupChatScreen(groupId: groupId);
         },
       ),
     ],

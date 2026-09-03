@@ -17,7 +17,7 @@ abstract class AppLocalizations {
   static const LocalizationsDelegate<AppLocalizations> delegate =
       _AppLocalizationsDelegate();
 
-  // ── General ──────────────────────────────────────────────────
+  // â”€â”€ General â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get appName;
   String get appTagline;
   String get ok;
@@ -35,7 +35,7 @@ abstract class AppLocalizations {
   String get copyright;
   String get noResults;
 
-  // ── Auth ─────────────────────────────────────────────────────
+  // â”€â”€ Auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get welcomeBack;
   String get createAccount;
   String get loginSubtitle;
@@ -59,7 +59,7 @@ abstract class AppLocalizations {
   String get signInWithGoogle;
   String get signInWithApple;
 
-  // ── Validation ───────────────────────────────────────────────
+  // â”€â”€ Validation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get enterEmail;
   String get invalidEmail;
   String get enterPassword;
@@ -81,10 +81,10 @@ abstract class AppLocalizations {
   String get failedGoogleLogin;
   String get failedAppleLogin;
 
-  // ── Splash ───────────────────────────────────────────────────
+  // â”€â”€ Splash â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get splashTagline;
 
-  // ── Home Dashboard ───────────────────────────────────────────
+  // â”€â”€ Home Dashboard â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get greeting;
   String imamName(String name);
   String get pendingBanner;
@@ -101,14 +101,16 @@ abstract class AppLocalizations {
   String get errorLoadingMosque;
   String get mosqueDataNotFound;
 
-  // ── Bottom Nav ───────────────────────────────────────────────
+  // ── Bottom Nav ──────────────────────────────────────────────────────────────
   String get navHome;
   String get navPosts;
+  String get navQuestions;
+  String get navForum;
   String get navPrayer;
   String get navProfile;
   String get navAdmin;
 
-  // ── Mosque Profile ───────────────────────────────────────────
+  // ── Mosque Profile ───────────────────────────────────────────────────────────
   String get mosqueProfile;
   String get mosqueDetails;
   String get country;
@@ -130,7 +132,7 @@ abstract class AppLocalizations {
   String get noDescriptionYet;
   String get noPostsYetMosque;
 
-  // ── Prayer Times ─────────────────────────────────────────────
+  // â”€â”€ Prayer Times â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get prayerTimes;
   String get fajr;
   String get sunrise;
@@ -156,7 +158,7 @@ abstract class AppLocalizations {
   String get fetchFailedBanner;
   String get saving;
 
-  // ── Posts ────────────────────────────────────────────────────
+  // â”€â”€ Posts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get myPosts;
   String get noPostsYet;
   String get noPostsSubtitle;
@@ -208,7 +210,7 @@ abstract class AppLocalizations {
   String get likesLabel;
   String get noLikesYet;
 
-  // ── Registration ─────────────────────────────────────────────
+  // â”€â”€ Registration â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get registerImam;
   String get imamData;
   String get imamDataSubtitle;
@@ -228,13 +230,13 @@ abstract class AppLocalizations {
   String get uploadMosquePhoto;
   String get saveAndSubmit;
 
-  // ── Under Review ─────────────────────────────────────────────
+  // â”€â”€ Under Review â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get underReview;
   String get underReviewMessage;
   String get accountBlocked;
   String get accountBlockedMessage;
 
-  // ── Profile Settings ─────────────────────────────────────────
+  // â”€â”€ Profile Settings â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get profileSettings;
   String get editPersonalData;
   String get notificationSettings;
@@ -261,7 +263,7 @@ abstract class AppLocalizations {
   String get errorLoadingData;
   String get profileNotFound;
 
-  // ── Admin Panel ───────────────────────────────────────────────
+  // â”€â”€ Admin Panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get adminPanel;
   String get restrictedAccess;
   String get restrictedMessage;
@@ -284,7 +286,7 @@ abstract class AppLocalizations {
   String get deleteFailed;
   String get allCategories;
 
-  // ── Admin Imams Management ────────────────────────────────────
+  // â”€â”€ Admin Imams Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get searchImamHint;
   String get statusPending;
   String get statusVerified;
@@ -321,16 +323,75 @@ abstract class AppLocalizations {
   String get unblock;
   String get noMatchingImams;
 
-  // ── Admin Posts ───────────────────────────────────────────────
+  // â”€â”€ Admin Posts â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get searchMosqueImamHint;
   String get commentDeleteFailed;
 
-  // ── Notifications ─────────────────────────────────────────────
+  // â”€â”€ Notifications â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   String get notificationsTitle;
   String get noNotifications;
   String get markAllRead;
   String get notificationsSubtitle;
   String get loginFirstForNotifications;
+  // ── Unclaimed Mosques & Ask Sheikh Setup ─────────────────────
+  String get selectExistingMosque;
+  String get addNewMosque;
+  String get searchMosquePlaceholder;
+  String get unclaimedMosquesTitle;
+  String get unclaimedMosquesSubtitle;
+  String get noUnclaimedMosquesFound;
+  String get cantFindYourMosque;
+  String get clickToRegisterNewMosque;
+  String get claimMosque;
+  String get claimMosqueConfirmTitle;
+  String claimMosqueConfirmMessage(String name, String city);
+  String get confirmClaim;
+  String get addedByWorshipper;
+  String distanceKm(String distance);
+  String distanceMeters(String distance);
+  String get askFeatureSettings;
+  String get askFeatureSetupSubtitle;
+  String get acceptingQuestions;
+  String get acceptingQuestionsSubtitle;
+  String get imamSpecialties;
+  String get imamSpecialtiesSubtitle;
+  String get imamBio;
+  String get imamBioHint;
+  String get responseTime;
+  String get responseTimeHint;
+  String get allowPrivateQuestions;
+  String get allowPrivateQuestionsSubtitle;
+  String get completeRegistration;
+  String get questionsPausedBanner;
+  String get activateQuestions;
+  String get pauseQuestions;
+  String get selectAtLeastOneSpecialty;
+  String get mosqueSelected;
+  String get loadingUnclaimedMosques;
+
+  // ── Imam Forum & Specialized Group Chat ─────────────────────
+  String get imamForum;
+  String get discoverGroups;
+  String get discoverGroupsSubtitle;
+  String get searchGroups;
+  String get joinGroup;
+  String get joinedGroup;
+  String get openChat;
+  String get requestToJoin;
+  String get leaveGroup;
+  String get leaveGroupConfirm;
+  String get groupMembers;
+  String get createGroup;
+  String get groupName;
+  String get groupDescription;
+  String get groupCategory;
+  String get typeMessage;
+  String get groupRules;
+  String get noGroupsFound;
+  String membersCountLabel(int count);
+  String get allSpecialties;
+  String get manageGroups;
+  String get groupCreatedSuccess;
 }
 
 // ── Delegate ─────────────────────────────────────────────────────

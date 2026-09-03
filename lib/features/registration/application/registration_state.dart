@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:latlong2/latlong.dart';
+import '../domain/mosque_model.dart';
 
 class RegistrationState {
   const RegistrationState({
@@ -8,6 +9,8 @@ class RegistrationState {
     this.phone = '',
     this.email = '',
     this.verificationDocument,
+    this.isClaimingExisting = false,
+    this.selectedMosque,
     this.mosqueName = '',
     this.country = '',
     this.countryCode = '',
@@ -17,6 +20,11 @@ class RegistrationState {
     this.mosquePhoto,
     this.capacity,
     this.contactPhone = '',
+    this.acceptingQuestions = true,
+    this.specialties = const [],
+    this.bio = '',
+    this.responseTime = '',
+    this.allowPrivateQuestions = true,
     this.isSubmitting = false,
     this.errorMessage,
   });
@@ -25,6 +33,10 @@ class RegistrationState {
   final String phone;
   final String email;
   final File? verificationDocument;
+
+  // ── Mosque step state ─────────────────────────────────────────
+  final bool isClaimingExisting;
+  final MosqueModel? selectedMosque;
   final String mosqueName;
   final String country;
   final String countryCode;
@@ -34,6 +46,14 @@ class RegistrationState {
   final File? mosquePhoto;
   final int? capacity;
   final String contactPhone;
+
+  // ── Ask Sheikh step state ─────────────────────────────────────
+  final bool acceptingQuestions;
+  final List<String> specialties;
+  final String bio;
+  final String responseTime;
+  final bool allowPrivateQuestions;
+
   final bool isSubmitting;
   final String? errorMessage;
 
@@ -43,6 +63,9 @@ class RegistrationState {
     String? email,
     File? verificationDocument,
     bool clearVerificationDocument = false,
+    bool? isClaimingExisting,
+    MosqueModel? selectedMosque,
+    bool clearSelectedMosque = false,
     String? mosqueName,
     String? country,
     String? countryCode,
@@ -55,6 +78,11 @@ class RegistrationState {
     int? capacity,
     bool clearCapacity = false,
     String? contactPhone,
+    bool? acceptingQuestions,
+    List<String>? specialties,
+    String? bio,
+    String? responseTime,
+    bool? allowPrivateQuestions,
     bool? isSubmitting,
     String? errorMessage,
     bool clearError = false,
@@ -66,6 +94,10 @@ class RegistrationState {
       verificationDocument: clearVerificationDocument
           ? null
           : (verificationDocument ?? this.verificationDocument),
+      isClaimingExisting: isClaimingExisting ?? this.isClaimingExisting,
+      selectedMosque: clearSelectedMosque
+          ? null
+          : (selectedMosque ?? this.selectedMosque),
       mosqueName: mosqueName ?? this.mosqueName,
       country: country ?? this.country,
       countryCode: countryCode ?? this.countryCode,
@@ -76,6 +108,12 @@ class RegistrationState {
           clearMosquePhoto ? null : (mosquePhoto ?? this.mosquePhoto),
       capacity: clearCapacity ? null : (capacity ?? this.capacity),
       contactPhone: contactPhone ?? this.contactPhone,
+      acceptingQuestions: acceptingQuestions ?? this.acceptingQuestions,
+      specialties: specialties ?? this.specialties,
+      bio: bio ?? this.bio,
+      responseTime: responseTime ?? this.responseTime,
+      allowPrivateQuestions:
+          allowPrivateQuestions ?? this.allowPrivateQuestions,
       isSubmitting: isSubmitting ?? this.isSubmitting,
       errorMessage: clearError ? null : (errorMessage ?? this.errorMessage),
     );

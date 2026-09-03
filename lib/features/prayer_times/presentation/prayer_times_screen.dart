@@ -106,13 +106,17 @@ class _PrayerTimesScreenState extends ConsumerState<PrayerTimesScreen> {
       backgroundColor: const Color(0xFFF4F6F8),
       appBar: AppBar(
         backgroundColor: Colors.white,
+        foregroundColor: const Color(0xFF111827),
+        iconTheme: const IconThemeData(color: Color(0xFF111827)),
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_rounded,
-              color: Color(0xFF111827), size: 20),
-          onPressed: () => Navigator.of(context).pop(),
-        ),
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back_ios_rounded,
+                    color: Color(0xFF111827), size: 20),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
         title: Text(
           l10n.prayerTimes,
           style: const TextStyle(

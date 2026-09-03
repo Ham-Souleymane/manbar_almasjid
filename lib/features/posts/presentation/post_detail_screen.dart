@@ -260,12 +260,27 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       appBar: AppBar(
         title: Text(
           l10n.postDetails,
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: Color(0xFF111827),
+          ),
         ),
         backgroundColor: Colors.white,
         foregroundColor: const Color(0xFF111827),
+        iconTheme: const IconThemeData(color: Color(0xFF111827)),
         elevation: 0.5,
         centerTitle: true,
+        leading: Navigator.canPop(context)
+            ? IconButton(
+                icon: const Icon(
+                  Icons.arrow_back_ios_rounded,
+                  color: Color(0xFF111827),
+                  size: 20,
+                ),
+                onPressed: () => Navigator.of(context).maybePop(),
+              )
+            : null,
       ),
       body: StreamBuilder<PostModel?>(
         stream: postStream,

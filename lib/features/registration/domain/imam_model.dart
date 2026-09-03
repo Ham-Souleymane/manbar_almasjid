@@ -14,6 +14,11 @@ class ImamModel {
     required this.createdAt,
     this.commentsNotify = true,
     this.verificationNotify = true,
+    this.acceptingQuestions = true,
+    this.specialties = const [],
+    this.bio = '',
+    this.responseTime = '',
+    this.allowPrivateQuestions = true,
   });
 
   final String id;
@@ -27,6 +32,13 @@ class ImamModel {
   final bool commentsNotify;
   final bool verificationNotify;
 
+  // ── Ask Sheikh / Qualifications & Availability ──────────────
+  final bool acceptingQuestions;
+  final List<String> specialties;
+  final String bio;
+  final String responseTime;
+  final bool allowPrivateQuestions;
+
   bool get isPending => status == ImamStatus.pending;
   bool get isVerified => status == ImamStatus.verified;
   bool get isRejected => status == ImamStatus.rejected;
@@ -34,6 +46,13 @@ class ImamModel {
 
   factory ImamModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
     final data = doc.data() ?? {};
+
+    // Support both 'specialties' and legacy 'fields'
+    final rawSpecialties = data['specialties'] ?? data['fields'];
+    final specialtiesList = rawSpecialties is List
+        ? rawSpecialties.map((e) => e.toString()).toList()
+        : <String>[];
+
     return ImamModel(
       id: doc.id,
       fullName: data['fullName']?.toString() ?? '',
@@ -43,8 +62,20 @@ class ImamModel {
       status: ImamStatus.fromString(data['status']?.toString() ?? 'pending'),
       mosqueId: data['mosqueId']?.toString(),
       createdAt: (data['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      commentsNotify: data['commentsNotify'] == null ? true : data['commentsNotify'] == true,
-      verificationNotify: data['verificationNotify'] == null ? true : data['verificationNotify'] == true,
+      commentsNotify:
+          data['commentsNotify'] == null ? true : data['commentsNotify'] == true,
+      verificationNotify: data['verificationNotify'] == null
+          ? true
+          : data['verificationNotify'] == true,
+      acceptingQuestions: data['acceptingQuestions'] == null
+          ? true
+          : data['acceptingQuestions'] == true,
+      specialties: specialtiesList,
+      bio: data['bio']?.toString() ?? '',
+      responseTime: data['responseTime']?.toString() ?? '',
+      allowPrivateQuestions: data['allowPrivateQuestions'] == null
+          ? true
+          : data['allowPrivateQuestions'] == true,
     );
   }
 
@@ -59,6 +90,12 @@ class ImamModel {
       'createdAt': Timestamp.fromDate(createdAt),
       'commentsNotify': commentsNotify,
       'verificationNotify': verificationNotify,
+      'acceptingQuestions': acceptingQuestions,
+      'specialties': specialties,
+      'fields': specialties, // legacy alias for compatibility
+      'bio': bio,
+      'responseTime': responseTime,
+      'allowPrivateQuestions': allowPrivateQuestions,
     };
   }
 
@@ -73,6 +110,11 @@ class ImamModel {
     DateTime? createdAt,
     bool? commentsNotify,
     bool? verificationNotify,
+    bool? acceptingQuestions,
+    List<String>? specialties,
+    String? bio,
+    String? responseTime,
+    bool? allowPrivateQuestions,
   }) {
     return ImamModel(
       id: id ?? this.id,
@@ -85,6 +127,12 @@ class ImamModel {
       createdAt: createdAt ?? this.createdAt,
       commentsNotify: commentsNotify ?? this.commentsNotify,
       verificationNotify: verificationNotify ?? this.verificationNotify,
+      acceptingQuestions: acceptingQuestions ?? this.acceptingQuestions,
+      specialties: specialties ?? this.specialties,
+      bio: bio ?? this.bio,
+      responseTime: responseTime ?? this.responseTime,
+      allowPrivateQuestions:
+          allowPrivateQuestions ?? this.allowPrivateQuestions,
     );
   }
 }

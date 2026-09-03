@@ -1,7 +1,7 @@
-name: manbar_almasjid
-description: "Manbar AlMasjid – Imam App for mosque management, prayer times, and community posts."
+﻿name: manbar_almasjid
+description: "Manbar AlMasjid â€“ Imam App for mosque management, prayer times, and community posts."
 publish_to: "none"
-version: 1.0.0+6
+version: 1.0.0+7
 
 environment:
   sdk: ">=3.4.0 <4.0.0"
@@ -12,29 +12,29 @@ dependencies:
   flutter_localizations:
     sdk: flutter
 
-  # ── Firebase ─────────────────────────────────────────────────
+  # â”€â”€ Firebase â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   firebase_core: ^4.11.0
   firebase_auth: ^6.5.4
   cloud_firestore: ^6.6.0
   firebase_storage: ^13.4.3
   firebase_messaging: ^16.4.1
 
-  # ── Google Sign-In & Apple Sign-In ───────────────────────────
+  # â”€â”€ Google Sign-In & Apple Sign-In â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   google_sign_in: ^7.2.0
   sign_in_with_apple: ^8.1.0
 
-  # ── State Management ─────────────────────────────────────────
+  # â”€â”€ State Management â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   flutter_riverpod: ^3.1.0
   riverpod_annotation: ^4.0.0
 
-  # ── Navigation ───────────────────────────────────────────────
+  # â”€â”€ Navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   go_router: ^17.3.0
 
-  # ── Fonts & UI ───────────────────────────────────────────────
+  # â”€â”€ Fonts & UI â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   google_fonts: ^8.1.0
   intl: ^0.20.2
 
-  # ── Utilities ────────────────────────────────────────────────
+  # â”€â”€ Utilities â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   shared_preferences: ^2.3.2
   lottie: ^3.1.2
   flutter_svg: ^2.0.10+1
@@ -47,8 +47,10 @@ dependencies:
   country_picker: ^2.0.27
 
   cupertino_icons: ^1.0.8
+  url_launcher: ^6.3.2
   http: ^1.6.0
   file_picker: ^8.0.0
+  flutter_local_notifications: ^22.3.0
 
 dev_dependencies:
   flutter_test:
@@ -77,3 +79,4 @@ flutter:
           weight: 700
         - asset: assets/fonts/Tajawal-ExtraBold.ttf
           weight: 800
+

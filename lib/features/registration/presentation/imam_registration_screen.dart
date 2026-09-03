@@ -150,6 +150,12 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
         appBar: AppBar(
           title: Text(l10n.registerImam),
           centerTitle: true,
+          leading: Navigator.canPop(context)
+              ? IconButton(
+                  icon: const Icon(Icons.arrow_back_ios_rounded),
+                  onPressed: () => Navigator.of(context).maybePop(),
+                )
+              : null,
         ),
         body: SafeArea(
           child: SingleChildScrollView(
@@ -159,7 +165,11 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const RegistrationProgressIndicator(currentStep: 1),
+                  RegistrationProgressIndicator(
+                    currentStep: 1,
+                    totalSteps: 3,
+                    stepTitle: l10n.imamData,
+                  ),
                   const SizedBox(height: 28),
                   Text(
                     l10n.imamData,

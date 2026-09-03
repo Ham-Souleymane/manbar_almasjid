@@ -7,11 +7,13 @@ class RegistrationProgressIndicator extends StatelessWidget {
   const RegistrationProgressIndicator({
     super.key,
     required this.currentStep,
-    this.totalSteps = 2,
+    this.totalSteps = 3,
+    this.stepTitle,
   });
 
   final int currentStep;
   final int totalSteps;
+  final String? stepTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -42,16 +44,31 @@ class RegistrationProgressIndicator extends StatelessWidget {
             );
           }),
         ),
-        const SizedBox(height: 12),
-        Text(
-          'الخطوة $currentStep من $totalSteps',
-          style: GoogleFonts.tajawal(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: AppColors.emerald,
-          ),
-          textDirection: TextDirection.rtl,
-          textAlign: TextAlign.center,
+        const SizedBox(height: 10),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            if (stepTitle != null)
+              Text(
+                stepTitle!,
+                style: GoogleFonts.tajawal(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.emeraldDark,
+                ),
+              )
+            else
+              const SizedBox.shrink(),
+            Text(
+              'الخطوة $currentStep من $totalSteps',
+              style: GoogleFonts.tajawal(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: AppColors.grey500,
+              ),
+              textDirection: TextDirection.rtl,
+            ),
+          ],
         ),
       ],
     );

@@ -7,6 +7,7 @@ import 'package:latlong2/latlong.dart';
 import '../../../core/providers/firebase_providers.dart';
 import '../../../core/services/geocoding_service.dart';
 import '../data/registration_repository.dart';
+import '../domain/mosque_model.dart';
 import 'registration_state.dart';
 
 class RegistrationController extends Notifier<RegistrationState> {
@@ -31,6 +32,27 @@ class RegistrationController extends Notifier<RegistrationState> {
     );
   }
 
+  void setIsClaimingExisting(bool isClaiming) {
+    state = state.copyWith(
+      isClaimingExisting: isClaiming,
+      clearError: true,
+    );
+  }
+
+  void selectUnclaimedMosque(MosqueModel mosque) {
+    state = state.copyWith(
+      isClaimingExisting: true,
+      selectedMosque: mosque,
+      mosqueName: mosque.name,
+      country: mosque.country,
+      city: mosque.city,
+      address: mosque.address,
+      location: LatLng(mosque.geopoint.latitude, mosque.geopoint.longitude),
+      contactPhone: mosque.contactPhone,
+      clearError: true,
+    );
+  }
+
   void setMosqueFields({
     String? mosqueName,
     String? country,
@@ -43,6 +65,8 @@ class RegistrationController extends Notifier<RegistrationState> {
     String? contactPhone,
   }) {
     state = state.copyWith(
+      isClaimingExisting: false,
+      clearSelectedMosque: true,
       mosqueName: mosqueName,
       country: country,
       countryCode: countryCode,
@@ -52,6 +76,24 @@ class RegistrationController extends Notifier<RegistrationState> {
       mosquePhoto: mosquePhoto,
       capacity: capacity,
       contactPhone: contactPhone,
+      clearError: true,
+    );
+  }
+
+  void setAskFeatureFields({
+    bool? acceptingQuestions,
+    List<String>? specialties,
+    String? bio,
+    String? responseTime,
+    bool? allowPrivateQuestions,
+  }) {
+    state = state.copyWith(
+      acceptingQuestions: acceptingQuestions ?? state.acceptingQuestions,
+      specialties: specialties ?? state.specialties,
+      bio: bio ?? state.bio,
+      responseTime: responseTime ?? state.responseTime,
+      allowPrivateQuestions:
+          allowPrivateQuestions ?? state.allowPrivateQuestions,
       clearError: true,
     );
   }
@@ -74,11 +116,6 @@ class RegistrationController extends Notifier<RegistrationState> {
       return false;
     }
 
-    if (state.location == null) {
-      state = state.copyWith(errorMessage: 'يرجى تحديد موقع المسجد على الخريطة.');
-      return false;
-    }
-
     state = state.copyWith(isSubmitting: true, clearError: true);
 
     try {
@@ -91,39 +128,68 @@ class RegistrationController extends Notifier<RegistrationState> {
         );
       }
 
-      String? mosquePhotoUrl;
-      if (state.mosquePhoto != null) {
-        mosquePhotoUrl = await _repo.uploadFile(
-          file: state.mosquePhoto!,
-          path:
-              'mosques/${user.uid}/photo_${DateTime.now().millisecondsSinceEpoch}',
+      // Case A: Claiming existing mosque
+      if (state.isClaimingExisting && state.selectedMosque != null) {
+        await _repo.claimExistingMosque(
+          imamId: user.uid,
+          fullName: state.fullName,
+          phone: state.phone,
+          email: state.email.isNotEmpty ? state.email : (user.email ?? ''),
+          verificationDocumentUrl: verificationUrl,
+          mosqueId: state.selectedMosque!.id,
+          acceptingQuestions: state.acceptingQuestions,
+          specialties: state.specialties,
+          bio: state.bio,
+          responseTime: state.responseTime,
+          allowPrivateQuestions: state.allowPrivateQuestions,
+        );
+      } else {
+        // Case B: Creating new mosque
+        if (state.location == null) {
+          state = state.copyWith(
+            isSubmitting: false,
+            errorMessage: 'يرجى تحديد موقع المسجد على الخريطة.',
+          );
+          return false;
+        }
+
+        String? mosquePhotoUrl;
+        if (state.mosquePhoto != null) {
+          mosquePhotoUrl = await _repo.uploadFile(
+            file: state.mosquePhoto!,
+            path:
+                'mosques/${user.uid}/photo_${DateTime.now().millisecondsSinceEpoch}',
+          );
+        }
+
+        await _repo.submitRegistration(
+          imamId: user.uid,
+          fullName: state.fullName,
+          phone: state.phone,
+          email: state.email.isNotEmpty ? state.email : (user.email ?? ''),
+          verificationDocumentUrl: verificationUrl,
+          mosqueName: state.mosqueName,
+          country: state.country,
+          city: state.city,
+          address: state.address,
+          geopoint: GeoPoint(
+            state.location!.latitude,
+            state.location!.longitude,
+          ),
+          mosquePhotoUrl: mosquePhotoUrl,
+          contactPhone: state.contactPhone,
+          capacity: state.capacity,
+          acceptingQuestions: state.acceptingQuestions,
+          specialties: state.specialties,
+          bio: state.bio,
+          responseTime: state.responseTime,
+          allowPrivateQuestions: state.allowPrivateQuestions,
         );
       }
 
-      await _repo.submitRegistration(
-        imamId: user.uid,
-        fullName: state.fullName,
-        phone: state.phone,
-        email: state.email.isNotEmpty ? state.email : (user.email ?? ''),
-        verificationDocumentUrl: verificationUrl,
-        mosqueName: state.mosqueName,
-        country: state.country,
-        city: state.city,
-        address: state.address,
-        geopoint: GeoPoint(
-          state.location!.latitude,
-          state.location!.longitude,
-        ),
-        mosquePhotoUrl: mosquePhotoUrl,
-        contactPhone: state.contactPhone,
-        capacity: state.capacity,
-      );
-
       state = state.copyWith(isSubmitting: false);
       return true;
-    } catch (e, stack) {
-      print('SUBMIT REGISTRATION ERROR: $e');
-      print(stack);
+    } catch (e) {
       state = state.copyWith(
         isSubmitting: false,
         errorMessage: 'فشل حفظ البيانات: $e',

@@ -89,6 +89,8 @@ class AppLocalizationsAr extends AppLocalizations {
 
   // ── Bottom Nav ───────────────────────────────────────────────
   @override String get navHome => 'الرئيسية';
+  @override String get navQuestions => 'الأسئلة';
+  @override String get navForum => 'الملتقى';
   @override String get navPosts => 'منشوراتي';
   @override String get navPrayer => 'الصلوات';
   @override String get navProfile => 'الحساب';
@@ -317,4 +319,63 @@ class AppLocalizationsAr extends AppLocalizations {
   @override String get markAllRead => 'قراءة الكل';
   @override String get notificationsSubtitle => 'ستظهر هنا الرسائل والتعليقات الجديدة فور حدوثها.';
   @override String get loginFirstForNotifications => 'يرجى تسجيل الدخول أولاً للوصول إلى التنبيهات.';
+  // ── Unclaimed Mosques & Ask Sheikh Setup ─────────────────────
+  @override String get selectExistingMosque => 'اختيار مسجد موجود';
+  @override String get addNewMosque => 'تسجيل مسجد جديد';
+  @override String get searchMosquePlaceholder => 'ابحث باسم المسجد، المدينة، أو الحي...';
+  @override String get unclaimedMosquesTitle => 'المساجد غير المرتبطة بإمام';
+  @override String get unclaimedMosquesSubtitle => 'اختر مسجدك إذا تمت إضافته مسبقاً من المصلين';
+  @override String get noUnclaimedMosquesFound => 'لم يتم العثور على مساجد غير مرتبطة مطابقة لبحثك.';
+  @override String get cantFindYourMosque => 'لم تجد مسجدك؟';
+  @override String get clickToRegisterNewMosque => 'اضغط هنا لتسجيل مسجد جديد';
+  @override String get claimMosque => 'اختيار المسجد';
+  @override String get claimMosqueConfirmTitle => 'تأكيد اختيار المسجد';
+  @override String claimMosqueConfirmMessage(String name, String city) => 'هل أنت متأكد من رغبتك في ربط نفسك كإمام لـ "$name" في $city؟';
+  @override String get confirmClaim => 'تأكيد الاختيار';
+  @override String get addedByWorshipper => 'أضيف بواسطة أحد المصلين';
+  @override String distanceKm(String distance) => 'على بعد $distance كم';
+  @override String distanceMeters(String distance) => 'على بعد $distance م';
+  @override String get askFeatureSettings => 'إعدادات ميزة اسأل الشيخ';
+  @override String get askFeatureSetupSubtitle => 'حدد تفضيلات استقبال الأسئلة واستشارات المصلين';
+  @override String get acceptingQuestions => 'استقبال أسئلة واستشارات المصلين';
+  @override String get acceptingQuestionsSubtitle => 'تفعيل أو إيقاف استقبال الأسئلة الجديدة مؤقتاً';
+  @override String get imamSpecialties => 'المجالات والتخصصات الشرعية';
+  @override String get imamSpecialtiesSubtitle => 'حدد المجالات التي ترغب في الإجابة عنها';
+  @override String get imamBio => 'النبذة العلمية والمؤهلات';
+  @override String get imamBioHint => 'مثال: خريج جامعة الأزهر، حافظ للقرآن الكريم ومجاز بالقراءات...';
+  @override String get responseTime => 'المواعيد المتوقعة للرد وأوقات التواجد';
+  @override String get responseTimeHint => 'مثال: الرد خلال 24-48 ساعة، أو بعد صلاة العصر';
+  @override String get allowPrivateQuestions => 'السماح بالاستشارات والأسئلة الخاصة';
+  @override String get allowPrivateQuestionsSubtitle => 'استقبال أسئلة خاصة 1-على-1 لا تظهر للعامة';
+  @override String get completeRegistration => 'إتمام التسجيل';
+  @override String get questionsPausedBanner => 'استقبال الأسئلة موقوف حالياً. انقر لإعادة التفعيل.';
+  @override String get activateQuestions => 'تفعيل استقبال الأسئلة';
+  @override String get pauseQuestions => 'إيقاف استقبال الأسئلة';
+  @override String get selectAtLeastOneSpecialty => 'يرجى تحديد تخصص واحد على الأقل';
+  @override String get mosqueSelected => 'تم اختيار المسجد بنجاح';
+  @override String get loadingUnclaimedMosques => 'جارٍ البحث عن المساجد...';
+
+  // ── Imam Forum & Specialized Group Chat ─────────────────────
+  @override String get imamForum => 'ملتقى الأئمة';
+  @override String get discoverGroups => 'استكشاف المجموعات (Discover Groups)';
+  @override String get discoverGroupsSubtitle => 'تواصل مع الأئمة والعلماء في مجالات متخصصة. انضم للمناقشات وتبادل الخبرات في بيئة أكاديمية وروحانية.';
+  @override String get searchGroups => 'البحث عن مجموعات...';
+  @override String get joinGroup => 'انضم للمجموعة';
+  @override String get joinedGroup => 'عضو';
+  @override String get openChat => 'دخول المحادثة';
+  @override String get requestToJoin => 'طلب انضمام';
+  @override String get leaveGroup => 'مغادرة المجموعة';
+  @override String get leaveGroupConfirm => 'هل أنت متأكد من رغبتك في مغادرة هذه المجموعة؟';
+  @override String get groupMembers => 'الأعضاء';
+  @override String get createGroup => 'إنشاء مجموعة جديدة';
+  @override String get groupName => 'اسم المجموعة';
+  @override String get groupDescription => 'وصف المجموعة';
+  @override String get groupCategory => 'التخصص / الفئة';
+  @override String get typeMessage => 'اكتب رسالتك هنا يا شيخ...';
+  @override String get groupRules => 'آداب وضوابط الحوار العلمي';
+  @override String get noGroupsFound => 'لم يتم العثور على مجموعات مطابقة';
+  @override String membersCountLabel(int count) => '$count عضو';
+  @override String get allSpecialties => 'الكل';
+  @override String get manageGroups => 'إدارة المجموعات';
+  @override String get groupCreatedSuccess => 'تم إنشاء المجموعة بنجاح';
 }
