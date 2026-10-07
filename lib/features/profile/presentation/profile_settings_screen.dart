@@ -8,9 +8,14 @@ import 'package:image_picker/image_picker.dart';
 
 import '../../../core/l10n/app_localizations.dart';
 import '../../../core/providers/locale_provider.dart';
+import '../../../core/router/app_router.dart';
+import '../../../core/theme/app_colors.dart';
+import 'package:go_router/go_router.dart';
 import '../../auth/application/auth_controller.dart';
+import '../../registration/application/registration_controller.dart';
 import '../../registration/data/registration_repository.dart';
 import '../../registration/domain/imam_model.dart';
+import '../../registration/domain/mosque_model.dart';
 import '../../questions/presentation/widgets/onboarding_fields_sheet.dart';
 
 class ProfileSettingsScreen extends ConsumerStatefulWidget {
@@ -613,6 +618,17 @@ class _ProfileSettingsScreenState extends ConsumerState<ProfileSettingsScreen> {
                       ),
                       const SizedBox(height: 24),
 
+                      // ── My Mosque Section ────────────────────────────────────
+                      Text(
+                        l10n.myMosque,
+                        style: const TextStyle(
+                            fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF374151)),
+                      ),
+                      const SizedBox(height: 10),
+                      _MyMosqueCard(imam: imam),
+
+                      const SizedBox(height: 24),
+
                       // Notification Preferences
                       Text(
                         l10n.notificationSettings,
@@ -799,6 +815,264 @@ class _LangChip extends StatelessWidget {
             color: selected ? Colors.white : Colors.black54,
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ── My Mosque Card ────────────────────────────────────────────────────────────
+
+/// Shows the mosque linked to the imam's account, or a prompt to add one.
+class _MyMosqueCard extends ConsumerStatefulWidget {
+  const _MyMosqueCard({required this.imam});
+  final ImamModel imam;
+
+  @override
+  ConsumerState<_MyMosqueCard> createState() => _MyMosqueCardState();
+}
+
+class _MyMosqueCardState extends ConsumerState<_MyMosqueCard> {
+  bool _isLinking = false;
+
+  /// Navigate to the mosque registration / selection flow.
+  void _openLinkMosqueFlow() {
+    // Reset the mosque fields in state and mark hasMosque = true so the
+    // mosque step knows the imam wants to add one, then route to it.
+    ref.read(registrationControllerProvider.notifier).setHasMosque(true);
+    context.go(AppRoutes.registerMosque);
+  }
+
+  Future<void> _unlinkMosque() async {
+    final l10n = context.l10n;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(l10n.myMosque, style: const TextStyle(fontWeight: FontWeight.bold)),
+        content: Text(l10n.noMosqueLinkedSubtitle),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: Text(l10n.cancel)),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.delete, style: const TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isLinking = true);
+    try {
+      final batch = FirebaseFirestore.instance.batch();
+      // Unlink from imam
+      batch.update(FirebaseFirestore.instance.collection('imams').doc(widget.imam.id), {
+        'mosqueId': FieldValue.delete(),
+      });
+      // If there's a mosque doc, update it
+      if (widget.imam.mosqueId != null) {
+        batch.update(
+          FirebaseFirestore.instance.collection('mosques').doc(widget.imam.mosqueId!),
+          {'imamId': FieldValue.delete(), 'imamName': FieldValue.delete(), 'hasImam': false},
+        );
+      }
+      await batch.commit();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.preferencesUpdated), backgroundColor: AppColors.emerald),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('${context.l10n.error}: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLinking = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final mosqueAsync = ref.watch(currentMosqueProvider);
+    final hasMosqueId = widget.imam.mosqueId != null && widget.imam.mosqueId!.isNotEmpty;
+
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      elevation: 0.5,
+      child: _isLinking
+          ? const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: CircularProgressIndicator(color: AppColors.emerald)),
+            )
+          : hasMosqueId
+              ? mosqueAsync.when(
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator(color: AppColors.emerald)),
+                  ),
+                  error: (e, _) => Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Text('${l10n.error}: $e', style: const TextStyle(color: Colors.red)),
+                  ),
+                  data: (mosque) {
+                    if (mosque == null) {
+                      return _NoMosqueContent(
+                        l10n: l10n,
+                        onLinkTap: _openLinkMosqueFlow,
+                      );
+                    }
+                    return _LinkedMosqueContent(
+                      mosque: mosque,
+                      l10n: l10n,
+                      onChangeTap: _openLinkMosqueFlow,
+                      onUnlinkTap: _unlinkMosque,
+                    );
+                  },
+                )
+              : _NoMosqueContent(l10n: l10n, onLinkTap: _openLinkMosqueFlow),
+    );
+  }
+}
+
+class _LinkedMosqueContent extends StatelessWidget {
+  const _LinkedMosqueContent({
+    required this.mosque,
+    required this.l10n,
+    required this.onChangeTap,
+    required this.onUnlinkTap,
+  });
+  final MosqueModel mosque;
+  final AppLocalizations l10n;
+  final VoidCallback onChangeTap;
+  final VoidCallback onUnlinkTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(10),
+                decoration: BoxDecoration(
+                  color: AppColors.emeraldPale,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(Icons.mosque_rounded, color: AppColors.emerald, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      mosque.name,
+                      style: const TextStyle(
+                          fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+                    ),
+                    Text(
+                      '${mosque.city}, ${mosque.country}',
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppColors.emeraldPale,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: Text(
+                  l10n.verified,
+                  style: const TextStyle(
+                      fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.emerald),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onChangeTap,
+                  icon: const Icon(Icons.swap_horiz_rounded, size: 18),
+                  label: Text(l10n.linkMosque),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.emerald,
+                    side: const BorderSide(color: AppColors.emerald),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              IconButton(
+                onPressed: onUnlinkTap,
+                icon: const Icon(Icons.link_off_rounded, color: Colors.red, size: 22),
+                tooltip: l10n.delete,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _NoMosqueContent extends StatelessWidget {
+  const _NoMosqueContent({required this.l10n, required this.onLinkTap});
+  final AppLocalizations l10n;
+  final VoidCallback onLinkTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF0FBF9),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.mosque_outlined, size: 36, color: AppColors.emerald),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.noMosqueLinked,
+            style: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF111827)),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            l10n.noMosqueLinkedSubtitle,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+          const SizedBox(height: 16),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: onLinkTap,
+              icon: const Icon(Icons.add_business_outlined, size: 18),
+              label: Text(l10n.linkMosque),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.emerald,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(vertical: 12),
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

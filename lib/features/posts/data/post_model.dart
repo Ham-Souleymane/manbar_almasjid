@@ -14,6 +14,7 @@ class PostModel {
   final int viewCount;
   final int likeCount;
   final int commentCount;
+  final bool postAsImam;
 
   PostModel({
     required this.id,
@@ -29,6 +30,7 @@ class PostModel {
     required this.viewCount,
     this.likeCount = 0,
     this.commentCount = 0,
+    this.postAsImam = false,
   });
 
   factory PostModel.fromFirestore(DocumentSnapshot<Map<String, dynamic>> doc) {
@@ -47,6 +49,7 @@ class PostModel {
       viewCount: data['viewCount'] as int? ?? 0,
       likeCount: data['likeCount'] as int? ?? 0,
       commentCount: data['commentCount'] as int? ?? 0,
+      postAsImam: data['postAsImam'] as bool? ?? false,
     );
   }
 
@@ -64,6 +67,7 @@ class PostModel {
       'viewCount': viewCount,
       'likeCount': likeCount,
       'commentCount': commentCount,
+      'postAsImam': postAsImam,
     };
   }
 
@@ -81,6 +85,7 @@ class PostModel {
     int? viewCount,
     int? likeCount,
     int? commentCount,
+    bool? postAsImam,
   }) {
     return PostModel(
       id: id ?? this.id,
@@ -96,6 +101,7 @@ class PostModel {
       viewCount: viewCount ?? this.viewCount,
       likeCount: likeCount ?? this.likeCount,
       commentCount: commentCount ?? this.commentCount,
+      postAsImam: postAsImam ?? this.postAsImam,
     );
   }
 }

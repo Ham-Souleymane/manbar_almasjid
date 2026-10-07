@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -37,6 +36,9 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
 
   bool _isCreatingAccount = false;
 
+  /// null = not answered yet, true = has mosque, false = no mosque
+  bool? _hasMosque;
+
   @override
   void initState() {
     super.initState();
@@ -53,6 +55,9 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
       } else if (regEmail.isNotEmpty) {
         _emailController.text = regEmail;
       }
+      // Restore previous mosque choice from state (in case user navigated back)
+      final prevHasMosque = ref.read(registrationControllerProvider).hasMosque;
+      if (prevHasMosque != null) setState(() => _hasMosque = prevHasMosque);
     });
   }
 
@@ -89,6 +94,14 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
   Future<void> _onNext() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (_hasMosque == null) {
+      context.showSnackBar(
+        context.l10n.hasMosqueQuestion,
+        isError: true,
+      );
+      return;
+    }
+
     FocusScope.of(context).unfocus();
 
     final isAuthenticated = ref.read(firebaseAuthProvider).currentUser != null;
@@ -119,7 +132,17 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
           email: _emailController.text,
         );
 
-    if (mounted) context.go(AppRoutes.registerMosque);
+    ref.read(registrationControllerProvider.notifier).setHasMosque(_hasMosque!);
+
+    if (!mounted) return;
+
+    if (_hasMosque == true) {
+      // Has mosque → proceed to mosque registration step
+      context.go(AppRoutes.registerMosque);
+    } else {
+      // No mosque → skip mosque step, go directly to ask-feature setup
+      context.go(AppRoutes.askFeatureSetup);
+    }
   }
 
   @override
@@ -130,6 +153,9 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
 
     final isAlreadyAuthenticated = authStateChanges.asData?.value != null;
     final isLoading = _isCreatingAccount || authState.isLoading;
+
+    // Show 2 steps if no mosque (imam data → ask setup), 3 if yes (imam data → mosque → ask setup)
+    final totalSteps = _hasMosque == false ? 2 : 3;
 
     ref.listen<AsyncValue<User?>>(authStateChangesProvider, (previous, next) {
       final user = next.asData?.value;
@@ -167,7 +193,7 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
                 children: [
                   RegistrationProgressIndicator(
                     currentStep: 1,
-                    totalSteps: 3,
+                    totalSteps: totalSteps,
                     stepTitle: l10n.imamData,
                   ),
                   const SizedBox(height: 28),
@@ -286,12 +312,17 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
                       isLoading: isLoading && authState.isLoading,
                     ),
                   ],
+
+
+
                   const SizedBox(height: 32),
                   AppButton(
                     label: l10n.next,
                     isLoading: isLoading,
                     onPressed: isLoading ? null : _onNext,
                   ),
+
+
                 ],
               ),
             ),

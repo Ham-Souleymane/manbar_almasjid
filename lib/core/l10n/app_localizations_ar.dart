@@ -267,6 +267,13 @@ class AppLocalizationsAr extends AppLocalizations {
   @override String get mosquePermanentlyDeleted => 'تم حذف المسجد بنجاح';
   @override String get searchMosqueHint => 'ابحث باسم المسجد أو المدينة...';
   @override String get noMatchingMosques => 'لا توجد نتائج مطابقة.';
+  @override String get mapView => 'الخريطة';
+  @override String get listView => 'القائمة';
+  @override String get showOnMap => 'عرض على الخريطة';
+  @override String get fitAllMosques => 'عرض جميع المساجد';
+  @override String get noMosquesWithLocation => 'لا توجد مساجد بإحداثيات مسجلة';
+  @override String get openInMaps => 'الاتجاهات';
+  @override String mosquesOnMapCount(int count) => '$count مسجد على الخريطة';
   @override String get deletePostConfirmTitle => 'حذف المنشور';
   @override String get deletePostConfirmBody => 'هل تريد حذف هذا المنشور نهائياً؟ لا يمكن التراجع.';
   @override String get deleteFailed => 'فشل الحذف';
@@ -378,4 +385,23 @@ class AppLocalizationsAr extends AppLocalizations {
   @override String get allSpecialties => 'الكل';
   @override String get manageGroups => 'إدارة المجموعات';
   @override String get groupCreatedSuccess => 'تم إنشاء المجموعة بنجاح';
+
+  // ── Mosque Registration Question ─────────────────────────────
+  @override String get hasMosqueQuestion => 'هل لديك مسجد؟';
+  @override String get hasMosqueSubtitle => 'يمكنك ربط مسجدك الآن أو إضافته لاحقاً من الإعدادات.';
+  @override String get hasMosqueYes => 'نعم، لديّ مسجد';
+  @override String get hasMosqueNo => 'لا، ليس لديّ مسجد حالياً';
+  @override String get continueWithoutMosque => 'المتابعة بدون مسجد';
+  @override String get continueBtn => 'متابعة';
+  @override String get postAsImam => 'نشر باسمي الشخصي (ليس كمسجد)';
+  @override String get postAsImamSubtitle => 'سيظهر اسمك كإمام بدلاً من اسم المسجد';
+  @override String get addMosqueLater => 'يمكنك إضافة مسجدك لاحقاً من الإعدادات';
+  @override String get myMosque => 'مسجدي';
+  @override String get myMosqueSubtitle => 'أضف أو اربط مسجدك بحسابك';
+  @override String get noMosqueLinked => 'لا يوجد مسجد مرتبط';
+  @override String get noMosqueLinkedSubtitle => 'يمكنك اختيار مسجد من القائمة أو إضافة مسجد جديد';
+  @override String get linkMosque => 'إضافة / ربط مسجد';
+  @override String get linkMosqueSuccess => 'تم ربط المسجد بنجاح';
+  @override String get postingAsImam => 'النشر باسمك كإمام';
+  @override String get postingAsMosque => 'النشر باسم المسجد';
 }

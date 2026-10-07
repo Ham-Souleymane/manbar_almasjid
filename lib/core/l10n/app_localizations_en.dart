@@ -267,6 +267,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override String get mosquePermanentlyDeleted => 'Mosque deleted successfully';
   @override String get searchMosqueHint => 'Search by mosque name or city...';
   @override String get noMatchingMosques => 'No matching results.';
+  @override String get mapView => 'Map';
+  @override String get listView => 'List';
+  @override String get showOnMap => 'Show on map';
+  @override String get fitAllMosques => 'Fit all mosques';
+  @override String get noMosquesWithLocation => 'No mosques with recorded location';
+  @override String get openInMaps => 'Directions';
+  @override String mosquesOnMapCount(int count) => '$count mosques on map';
   @override String get deletePostConfirmTitle => 'Delete Post';
   @override String get deletePostConfirmBody => 'Do you want to permanently delete this post? This cannot be undone.';
   @override String get deleteFailed => 'Delete failed';
@@ -378,4 +385,23 @@ class AppLocalizationsEn extends AppLocalizations {
   @override String get allSpecialties => 'All';
   @override String get manageGroups => 'Manage Groups';
   @override String get groupCreatedSuccess => 'Group created successfully';
+
+  // ── Mosque Registration Question ─────────────────────────────
+  @override String get hasMosqueQuestion => 'Do you have a mosque?';
+  @override String get hasMosqueSubtitle => 'You can link your mosque now or add it later from settings.';
+  @override String get hasMosqueYes => 'Yes, I have a mosque';
+  @override String get hasMosqueNo => 'No, I don\'t have a mosque yet';
+  @override String get continueWithoutMosque => 'Continue without a mosque';
+  @override String get continueBtn => 'Continue';
+  @override String get postAsImam => 'Post as myself (not as Mosque)';
+  @override String get postAsImamSubtitle => 'Your name will appear as the author instead of the Mosque\'s name';
+  @override String get addMosqueLater => 'You can add your mosque later from settings';
+  @override String get myMosque => 'My Mosque';
+  @override String get myMosqueSubtitle => 'Add or link a mosque to your account';
+  @override String get noMosqueLinked => 'No mosque linked';
+  @override String get noMosqueLinkedSubtitle => 'You can pick an existing mosque or register a new one';
+  @override String get linkMosque => 'Add / Link Mosque';
+  @override String get linkMosqueSuccess => 'Mosque linked successfully';
+  @override String get postingAsImam => 'Posting as yourself (Imam)';
+  @override String get postingAsMosque => 'Posting as the Mosque';
 }

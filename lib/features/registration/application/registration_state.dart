@@ -9,6 +9,7 @@ class RegistrationState {
     this.phone = '',
     this.email = '',
     this.verificationDocument,
+    this.hasMosque,
     this.isClaimingExisting = false,
     this.selectedMosque,
     this.mosqueName = '',
@@ -33,6 +34,9 @@ class RegistrationState {
   final String phone;
   final String email;
   final File? verificationDocument;
+
+  /// null = not answered yet, true = has mosque, false = no mosque (skipped)
+  final bool? hasMosque;
 
   // ── Mosque step state ─────────────────────────────────────────
   final bool isClaimingExisting;
@@ -63,6 +67,8 @@ class RegistrationState {
     String? email,
     File? verificationDocument,
     bool clearVerificationDocument = false,
+    bool? hasMosque,
+    bool clearHasMosque = false,
     bool? isClaimingExisting,
     MosqueModel? selectedMosque,
     bool clearSelectedMosque = false,
@@ -94,6 +100,7 @@ class RegistrationState {
       verificationDocument: clearVerificationDocument
           ? null
           : (verificationDocument ?? this.verificationDocument),
+      hasMosque: clearHasMosque ? null : (hasMosque ?? this.hasMosque),
       isClaimingExisting: isClaimingExisting ?? this.isClaimingExisting,
       selectedMosque: clearSelectedMosque
           ? null

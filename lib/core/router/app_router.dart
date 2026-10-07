@@ -63,7 +63,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         if (!isLoggedIn) return AppRoutes.login;
         if (isAdmin) return AppRoutes.home;
         if (imam == null) return AppRoutes.registerImam;
-        if (imam.status == ImamStatus.pending || imam.status == ImamStatus.blocked) {
+        if (imam.status == ImamStatus.blocked) {
           return AppRoutes.underReview;
         }
         if (imam.status == ImamStatus.rejected) return AppRoutes.registerImam;
@@ -92,8 +92,8 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // Pending review or Blocked → under review screen
-      if (imam.status == ImamStatus.pending || imam.status == ImamStatus.blocked) {
+      // Blocked → under review screen
+      if (imam.status == ImamStatus.blocked) {
         if (location != AppRoutes.underReview) return AppRoutes.underReview;
         return null;
       }
@@ -104,7 +104,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         return null;
       }
 
-      // Verified imam
+      // Verified imam — allow mosque/ask-setup routes if they have no mosque
+      // (accessing from settings to add mosque later)
+      final verifiedMosqueRoutes = {
+        AppRoutes.registerMosque,
+        AppRoutes.askFeatureSetup,
+      };
+      if (imam.mosqueId == null &&
+          (verifiedMosqueRoutes.contains(location) ||
+              location == AppRoutes.registerImam)) {
+        return null; // let them through
+      }
+
       if (publicRoutes.contains(location) ||
           registrationRoutes.contains(location) ||
           location == AppRoutes.underReview) {

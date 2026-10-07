@@ -231,7 +231,16 @@ class _MosqueRegistrationScreenState
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go(AppRoutes.registerImam),
+            onPressed: () {
+              // If this screen was opened from settings (imam already verified),
+              // go back to home. Otherwise go back through the registration flow.
+              final imam = ref.read(currentImamProvider).asData?.value;
+              if (imam != null && imam.isVerified) {
+                context.go(AppRoutes.home);
+              } else {
+                context.go(AppRoutes.registerImam);
+              }
+            },
           ),
         ),
         body: SafeArea(

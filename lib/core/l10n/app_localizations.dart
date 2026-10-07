@@ -281,6 +281,13 @@ abstract class AppLocalizations {
   String get mosquePermanentlyDeleted;
   String get searchMosqueHint;
   String get noMatchingMosques;
+  String get mapView;
+  String get listView;
+  String get showOnMap;
+  String get fitAllMosques;
+  String get noMosquesWithLocation;
+  String get openInMaps;
+  String mosquesOnMapCount(int count);
   String get deletePostConfirmTitle;
   String get deletePostConfirmBody;
   String get deleteFailed;
@@ -392,6 +399,25 @@ abstract class AppLocalizations {
   String get allSpecialties;
   String get manageGroups;
   String get groupCreatedSuccess;
+
+  // ── Mosque Registration Question ─────────────────────────────
+  String get hasMosqueQuestion;
+  String get hasMosqueSubtitle;
+  String get hasMosqueYes;
+  String get hasMosqueNo;
+  String get continueWithoutMosque;
+  String get continueBtn;
+  String get postAsImam;
+  String get postAsImamSubtitle;
+  String get addMosqueLater;
+  String get myMosque;
+  String get myMosqueSubtitle;
+  String get noMosqueLinked;
+  String get noMosqueLinkedSubtitle;
+  String get linkMosque;
+  String get linkMosqueSuccess;
+  String get postingAsImam;
+  String get postingAsMosque;
 }
 
 // ── Delegate ─────────────────────────────────────────────────────

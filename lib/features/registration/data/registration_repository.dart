@@ -105,6 +105,61 @@ class RegistrationRepository {
     );
   }
 
+  /// Creates an Imam profile with no mosque linked.
+  /// The imam can link or register a mosque later from profile settings.
+  Future<void> submitImamWithoutMosque({
+    required String imamId,
+    required String fullName,
+    required String phone,
+    required String email,
+    required String? verificationDocumentUrl,
+    bool acceptingQuestions = true,
+    List<String> specialties = const [],
+    String bio = '',
+    String responseTime = '',
+    bool allowPrivateQuestions = true,
+  }) async {
+    final now = DateTime.now();
+
+    final imam = ImamModel(
+      id: imamId,
+      fullName: fullName,
+      phone: phone,
+      email: email,
+      photo: verificationDocumentUrl,
+      status: ImamStatus.verified,
+      mosqueId: null,
+      createdAt: now,
+      acceptingQuestions: acceptingQuestions,
+      specialties: specialties,
+      bio: bio,
+      responseTime: responseTime,
+      allowPrivateQuestions: allowPrivateQuestions,
+    );
+
+    final batch = _firestore.batch();
+
+    // 1. Create Imam Profile in 'imams'
+    batch.set(_imams.doc(imamId), imam.toFirestore(), SetOptions(merge: true));
+
+    // 2. Sync to 'users' collection
+    batch.set(_users.doc(imamId), {
+      'fullName': fullName,
+      'phone': phone,
+      'email': email,
+      'role': 'imam',
+      'mosqueId': null,
+      'acceptingQuestions': acceptingQuestions,
+      'specialties': specialties,
+      'bio': bio,
+      'responseTime': responseTime,
+      'allowPrivateQuestions': allowPrivateQuestions,
+      'createdAt': Timestamp.fromDate(now),
+    }, SetOptions(merge: true));
+
+    await batch.commit();
+  }
+
   /// Claims an existing unclaimed mosque and creates the Imam profile atomically.
   Future<void> claimExistingMosque({
     required String imamId,

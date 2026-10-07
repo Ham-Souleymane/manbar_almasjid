@@ -122,7 +122,9 @@ class _AskFeatureSetupScreenState extends ConsumerState<AskFeatureSetupScreen> {
 
     if (!mounted) return;
     if (success) {
-      context.go(AppRoutes.underReview);
+      // All registration paths set imam status to verified immediately —
+      // no admin approval required. Go straight to home.
+      context.go(AppRoutes.home);
     } else {
       final error = ref.read(registrationControllerProvider).errorMessage;
       context.showSnackBar(error ?? l10n.anErrorOccurred, isError: true);
@@ -143,7 +145,14 @@ class _AskFeatureSetupScreenState extends ConsumerState<AskFeatureSetupScreen> {
           centerTitle: true,
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
-            onPressed: () => context.go(AppRoutes.registerMosque),
+            onPressed: () {
+              final regState = ref.read(registrationControllerProvider);
+              if (regState.hasMosque == false) {
+                context.go(AppRoutes.registerImam);
+              } else {
+                context.go(AppRoutes.registerMosque);
+              }
+            },
           ),
         ),
         body: SafeArea(
@@ -153,8 +162,8 @@ class _AskFeatureSetupScreenState extends ConsumerState<AskFeatureSetupScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 RegistrationProgressIndicator(
-                  currentStep: 3,
-                  totalSteps: 3,
+                  currentStep: regState.hasMosque == false ? 2 : 3,
+                  totalSteps: regState.hasMosque == false ? 2 : 3,
                   stepTitle: l10n.askFeatureSettings,
                 ),
                 const SizedBox(height: 24),

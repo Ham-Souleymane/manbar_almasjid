@@ -35,6 +35,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
   DateTime? _scheduledFor;
 
   bool _isSubmitting = false;
+  bool _postAsImam = false;
 
   final ImagePicker _imagePicker = ImagePicker();
 
@@ -179,13 +180,16 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final imam = imamAsync.asData?.value;
     final mosque = mosqueAsync.asData?.value;
 
-    if (imam == null || mosque == null) {
+    if (imam == null) {
       _showSnackBar(l10n.errorLoadingData);
       return;
     }
+    
+    // If no mosque, force posting as imam.
+    final effectivePostAsImam = (mosque == null) ? true : _postAsImam;
 
-    if (imam.status != ImamStatus.verified) {
-      _showSnackBar(l10n.accountNotVerified);
+    if (imam.status == ImamStatus.blocked) {
+      _showSnackBar(l10n.accountNotVerified); // Or a specific blocked message if it exists
       return;
     }
 
@@ -204,7 +208,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
 
       final post = PostModel(
         id: '', // Will be set by Firebase docRef
-        mosqueId: mosque.id,
+        mosqueId: mosque?.id ?? '',
         imamId: imam.id,
         text: _textController.text.trim(),
         mediaUrls: mediaUrls,
@@ -214,6 +218,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
         scheduledFor: _scheduledFor,
         createdAt: DateTime.now(),
         viewCount: 0,
+        postAsImam: effectivePostAsImam,
       );
 
       await ref.read(postsRepositoryProvider).createPost(post);
@@ -249,7 +254,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
     final imamAsync = ref.watch(currentImamProvider);
     final mosqueAsync = ref.watch(currentMosqueProvider);
 
-    final isVerified = imamAsync.asData?.value?.status == ImamStatus.verified;
+    final isBlocked = imamAsync.asData?.value?.status == ImamStatus.blocked;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF4F6F8),
@@ -383,7 +388,7 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                                   ],
                                 ),
                               ),
-                              if (isVerified)
+                              if (mosque.verified)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
@@ -635,12 +640,51 @@ class _CreatePostScreenState extends ConsumerState<CreatePostScreen> {
                     ),
                     const SizedBox(height: 32),
 
+                    // Post As Imam Toggle (only show if they have a mosque)
+                    if (mosqueAsync.asData?.value != null) ...[
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.03),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: SwitchListTile(
+                          title: Text(
+                            l10n.postAsImam,
+                            style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF374151)),
+                          ),
+                          subtitle: Text(
+                            l10n.postAsImamSubtitle,
+                            style: const TextStyle(
+                                fontSize: 12, color: Color(0xFF6B7280)),
+                          ),
+                          value: _postAsImam,
+                          activeThumbColor: const Color(0xFF0F766E),
+                          onChanged: (val) {
+                            setState(() {
+                              _postAsImam = val;
+                            });
+                          },
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                    ],
+
                     // Submit Button
                     SizedBox(
                       width: double.infinity,
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: (isVerified && !_isSubmitting)
+                        onPressed: (!isBlocked && !_isSubmitting)
                             ? _publishPost
                             : null,
                         style: ElevatedButton.styleFrom(

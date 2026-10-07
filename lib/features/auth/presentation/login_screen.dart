@@ -101,7 +101,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
             phone: '',
             email: _emailController.text.trim(),
           );
-      if (mounted) context.go(AppRoutes.registerImam);
+      if (mounted) _showMosqueQuestionSheet();
       return;
     }
 
@@ -113,6 +113,22 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         isError: true,
       );
     }
+  }
+
+  /// Shows the "هل لديك مسجد؟" bottom sheet before entering the registration flow.
+  void _showMosqueQuestionSheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _MosqueQuestionSheet(
+        onAnswer: (hasMosque) {
+          Navigator.of(ctx).pop();
+          ref.read(registrationControllerProvider.notifier).setHasMosque(hasMosque);
+          context.go(AppRoutes.registerImam);
+        },
+      ),
+    );
   }
 
   Future<void> _signInWithGoogle() async {
@@ -428,7 +444,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         GestureDetector(
           onTap: () {
             if (_mode == _AuthMode.login) {
-              context.go(AppRoutes.registerImam);
+              _showMosqueQuestionSheet();
             } else {
               _toggleMode();
             }
@@ -640,6 +656,207 @@ class _ForgotPasswordSheetState extends State<_ForgotPasswordSheet> {
                 }
               },
               child: Text(l10n.send),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Mosque Question Sheet ─────────────────────────────────────────────────────
+
+class _MosqueQuestionSheet extends StatefulWidget {
+  const _MosqueQuestionSheet({required this.onAnswer});
+  final void Function(bool hasMosque) onAnswer;
+
+  @override
+  State<_MosqueQuestionSheet> createState() => _MosqueQuestionSheetState();
+}
+
+class _MosqueQuestionSheetState extends State<_MosqueQuestionSheet> {
+  bool? _selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
+      ),
+      padding: const EdgeInsets.fromLTRB(24, 12, 24, 36),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Drag handle
+          Container(
+            width: 42,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          // Mosque icon
+          Container(
+            padding: const EdgeInsets.all(18),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE6F7F4),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.mosque_rounded, size: 38, color: AppColors.emerald),
+          ),
+          const SizedBox(height: 16),
+
+          // Title
+          Text(
+            l10n.hasMosqueQuestion,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.tajawal(
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.emeraldDark,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            l10n.hasMosqueSubtitle,
+            textAlign: TextAlign.center,
+            style: GoogleFonts.tajawal(
+              fontSize: 13,
+              color: AppColors.grey500,
+            ),
+          ),
+          const SizedBox(height: 28),
+
+          // Yes / No cards
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+              Expanded(
+                child: _MosqueAnswerCard(
+                  label: l10n.hasMosqueYes,
+                  icon: Icons.check_circle_outline_rounded,
+                  selected: _selected == true,
+                  selectedColor: AppColors.emerald,
+                  onTap: () => setState(() => _selected = true),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: _MosqueAnswerCard(
+                  label: l10n.hasMosqueNo,
+                  icon: Icons.cancel_outlined,
+                  selected: _selected == false,
+                  selectedColor: const Color(0xFFD97706),
+                  onTap: () => setState(() => _selected = false),
+                ),
+              ),
+            ],
+          ),
+          ),
+          const SizedBox(height: 24),
+
+          // Continue button — only enabled once a choice is made
+          AnimatedOpacity(
+            duration: const Duration(milliseconds: 200),
+            opacity: _selected != null ? 1.0 : 0.45,
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _selected != null ? () => widget.onAnswer(_selected!) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.emerald,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: AppColors.emerald,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  textStyle: GoogleFonts.tajawal(
+                      fontSize: 16, fontWeight: FontWeight.w700),
+                ),
+                child: Text(l10n.continueBtn),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MosqueAnswerCard extends StatelessWidget {
+  const _MosqueAnswerCard({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.selectedColor,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color selectedColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 22, horizontal: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? selectedColor.withValues(alpha: 0.08)
+              : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? selectedColor : Colors.grey.shade300,
+            width: selected ? 2.0 : 1.0,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: selectedColor.withValues(alpha: 0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: selected
+                    ? selectedColor.withValues(alpha: 0.15)
+                    : Colors.grey.shade200,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 28,
+                color: selected ? selectedColor : Colors.grey.shade500,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.tajawal(
+                fontSize: 15,
+                fontWeight: FontWeight.w700,
+                color: selected ? selectedColor : Colors.grey.shade600,
+              ),
             ),
           ],
         ),

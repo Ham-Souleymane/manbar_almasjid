@@ -32,6 +32,13 @@ class RegistrationController extends Notifier<RegistrationState> {
     );
   }
 
+  void setHasMosque(bool value) {
+    state = state.copyWith(
+      hasMosque: value,
+      clearError: true,
+    );
+  }
+
   void setIsClaimingExisting(bool isClaiming) {
     state = state.copyWith(
       isClaimingExisting: isClaiming,
@@ -128,8 +135,23 @@ class RegistrationController extends Notifier<RegistrationState> {
         );
       }
 
+      // Case C: Imam with no mosque (hasMosque == false)
+      if (state.hasMosque == false) {
+        await _repo.submitImamWithoutMosque(
+          imamId: user.uid,
+          fullName: state.fullName,
+          phone: state.phone,
+          email: state.email.isNotEmpty ? state.email : (user.email ?? ''),
+          verificationDocumentUrl: verificationUrl,
+          acceptingQuestions: state.acceptingQuestions,
+          specialties: state.specialties,
+          bio: state.bio,
+          responseTime: state.responseTime,
+          allowPrivateQuestions: state.allowPrivateQuestions,
+        );
+      }
       // Case A: Claiming existing mosque
-      if (state.isClaimingExisting && state.selectedMosque != null) {
+      else if (state.isClaimingExisting && state.selectedMosque != null) {
         await _repo.claimExistingMosque(
           imamId: user.uid,
           fullName: state.fullName,

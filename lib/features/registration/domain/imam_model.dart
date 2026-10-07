@@ -55,7 +55,7 @@ class ImamModel {
 
     return ImamModel(
       id: doc.id,
-      fullName: data['fullName']?.toString() ?? '',
+      fullName: data['fullName']?.toString() ?? data['name']?.toString() ?? '',
       phone: data['phone']?.toString() ?? '',
       email: data['email']?.toString() ?? '',
       photo: data['photo']?.toString(),
