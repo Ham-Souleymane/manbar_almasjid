@@ -1,4 +1,4 @@
-﻿name: manbar_almasjid
+name: manbar_almasjid
 description: "Manbar AlMasjid â€“ Imam App for mosque management, prayer times, and community posts."
 publish_to: "none"
 version: 1.0.1+10
@@ -49,6 +49,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   url_launcher: ^6.3.2
   http: ^1.6.0
+  http_parser: ^4.1.2
   file_picker: ^8.0.0
   flutter_local_notifications: ^22.3.0
 

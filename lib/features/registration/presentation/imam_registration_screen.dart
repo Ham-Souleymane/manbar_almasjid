@@ -16,6 +16,7 @@ import '../../auth/presentation/widgets/auth_text_field.dart';
 import '../../auth/presentation/widgets/google_sign_in_button.dart';
 import '../../auth/presentation/widgets/apple_sign_in_button.dart';
 import '../application/registration_controller.dart';
+import '../data/registration_repository.dart';
 import 'widgets/registration_progress_indicator.dart';
 
 class ImamRegistrationScreen extends ConsumerStatefulWidget {
@@ -71,6 +72,56 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
     super.dispose();
   }
 
+  Future<void> _handleSocialSignInSuccess(User user) async {
+    final imam = await ref.read(registrationRepositoryProvider).getImam(user.uid);
+    if (!mounted) return;
+
+    // If imam is already fully registered WITH a mosque, go directly to home
+    if (imam != null && imam.mosqueId != null) {
+      context.go(AppRoutes.home);
+      return;
+    }
+
+    final imamName = (imam != null && imam.fullName.isNotEmpty)
+        ? imam.fullName
+        : (_fullNameController.text.trim().isNotEmpty
+            ? _fullNameController.text.trim()
+            : (user.displayName ?? ''));
+    final imamPhone = (imam != null && imam.phone.isNotEmpty)
+        ? imam.phone
+        : _phoneController.text.trim();
+    final imamEmail = (imam != null && imam.email.isNotEmpty)
+        ? imam.email
+        : (user.email ?? '');
+
+    ref.read(registrationControllerProvider.notifier).setImamStep(
+          fullName: imamName,
+          phone: imamPhone,
+          email: imamEmail,
+        );
+
+    // Check effective mosque choice: screen state takes precedence, fallback to provider state
+    final effectiveHasMosque =
+        _hasMosque ?? ref.read(registrationControllerProvider).hasMosque;
+
+    if (effectiveHasMosque == true) {
+      ref.read(registrationControllerProvider.notifier).setHasMosque(true);
+      context.go(AppRoutes.registerMosque);
+    } else if (effectiveHasMosque == false) {
+      ref.read(registrationControllerProvider.notifier).setHasMosque(false);
+      context.go(AppRoutes.askFeatureSetup);
+    } else {
+      // User hasn't chosen yet: prefill form and prompt user
+      _fullNameController.text = imamName;
+      _emailController.text = imamEmail;
+      if (imamPhone.isNotEmpty) _phoneController.text = imamPhone;
+      context.showSnackBar(
+        context.l10n.hasMosqueQuestion,
+        isError: true,
+      );
+    }
+  }
+
   Future<void> _signInWithGoogle() async {
     FocusScope.of(context).unfocus();
     await ref.read(authControllerProvider.notifier).signInWithGoogle();
@@ -78,6 +129,12 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
     final state = ref.read(authControllerProvider);
     if (state.hasError) {
       context.showSnackBar(state.errorMessage ?? context.l10n.failedGoogleLogin, isError: true);
+      return;
+    }
+
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    if (user != null) {
+      await _handleSocialSignInSuccess(user);
     }
   }
 
@@ -88,6 +145,12 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
     final state = ref.read(authControllerProvider);
     if (state.hasError) {
       context.showSnackBar(state.errorMessage ?? context.l10n.failedAppleLogin, isError: true);
+      return;
+    }
+
+    final user = ref.read(firebaseAuthProvider).currentUser;
+    if (user != null) {
+      await _handleSocialSignInSuccess(user);
     }
   }
 
@@ -313,7 +376,51 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
                     ),
                   ],
 
-
+                  // ── Mosque question ─────────────────────────────
+                  const SizedBox(height: 28),
+                  Text(
+                    context.l10n.hasMosqueQuestion,
+                    style: GoogleFonts.tajawal(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.emeraldDark,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    context.l10n.hasMosqueSubtitle,
+                    style: GoogleFonts.tajawal(
+                      fontSize: 13,
+                      color: AppColors.grey500,
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  IntrinsicHeight(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Expanded(
+                          child: _MosqueChoiceCard(
+                            label: context.l10n.hasMosqueYes,
+                            icon: Icons.check_circle_outline_rounded,
+                            selected: _hasMosque == true,
+                            selectedColor: AppColors.emerald,
+                            onTap: () => setState(() => _hasMosque = true),
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: _MosqueChoiceCard(
+                            label: context.l10n.hasMosqueNo,
+                            icon: Icons.cancel_outlined,
+                            selected: _hasMosque == false,
+                            selectedColor: Color(0xFFD97706),
+                            onTap: () => setState(() => _hasMosque = false),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
 
                   const SizedBox(height: 32),
                   AppButton(
@@ -327,6 +434,83 @@ class _ImamRegistrationScreenState extends ConsumerState<ImamRegistrationScreen>
               ),
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Mosque choice card ──────────────────────────────────────────────────────
+class _MosqueChoiceCard extends StatelessWidget {
+  const _MosqueChoiceCard({
+    required this.label,
+    required this.icon,
+    required this.selected,
+    required this.selectedColor,
+    required this.onTap,
+  });
+
+  final String label;
+  final IconData icon;
+  final bool selected;
+  final Color selectedColor;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
+        padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 12),
+        decoration: BoxDecoration(
+          color: selected
+              ? selectedColor.withValues(alpha: 0.08)
+              : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: selected ? selectedColor : Colors.grey.shade300,
+            width: selected ? 2.0 : 1.0,
+          ),
+          boxShadow: selected
+              ? [
+                  BoxShadow(
+                    color: selectedColor.withValues(alpha: 0.18),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
+                  )
+                ]
+              : null,
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 180),
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: selected
+                    ? selectedColor.withValues(alpha: 0.15)
+                    : Colors.grey.shade200,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 26,
+                color: selected ? selectedColor : Colors.grey.shade500,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: GoogleFonts.tajawal(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: selected ? selectedColor : Colors.grey.shade600,
+              ),
+            ),
+          ],
         ),
       ),
     );

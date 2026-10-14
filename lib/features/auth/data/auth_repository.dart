@@ -111,7 +111,7 @@ class AuthRepository implements IAuthRepository {
         idToken: googleAuth.idToken,
       );
 
-      return _auth.signInWithCredential(credential);
+      return await _auth.signInWithCredential(credential);
     } on GoogleSignInException catch (e) {
       debugPrint('GoogleSignInException caught: code=${e.code}, description=${e.description}');
       // User tapped "Cancel" — treat as a silent no-op.

@@ -152,10 +152,21 @@ class RegistrationController extends Notifier<RegistrationState> {
       }
       // Case A: Claiming existing mosque
       else if (state.isClaimingExisting && state.selectedMosque != null) {
+        var name = state.fullName;
+        var phone = state.phone;
+        if (name.isEmpty || phone.isEmpty) {
+          final existingImam = await _repo.getImam(user.uid);
+          if (existingImam != null) {
+            if (name.isEmpty) name = existingImam.fullName;
+            if (phone.isEmpty) phone = existingImam.phone;
+          }
+          if (name.isEmpty) name = user.displayName ?? '';
+        }
+
         await _repo.claimExistingMosque(
           imamId: user.uid,
-          fullName: state.fullName,
-          phone: state.phone,
+          fullName: name,
+          phone: phone,
           email: state.email.isNotEmpty ? state.email : (user.email ?? ''),
           verificationDocumentUrl: verificationUrl,
           mosqueId: state.selectedMosque!.id,
@@ -184,10 +195,21 @@ class RegistrationController extends Notifier<RegistrationState> {
           );
         }
 
+        var name = state.fullName;
+        var phone = state.phone;
+        if (name.isEmpty || phone.isEmpty) {
+          final existingImam = await _repo.getImam(user.uid);
+          if (existingImam != null) {
+            if (name.isEmpty) name = existingImam.fullName;
+            if (phone.isEmpty) phone = existingImam.phone;
+          }
+          if (name.isEmpty) name = user.displayName ?? '';
+        }
+
         await _repo.submitRegistration(
           imamId: user.uid,
-          fullName: state.fullName,
-          phone: state.phone,
+          fullName: name,
+          phone: phone,
           email: state.email.isNotEmpty ? state.email : (user.email ?? ''),
           verificationDocumentUrl: verificationUrl,
           mosqueName: state.mosqueName,

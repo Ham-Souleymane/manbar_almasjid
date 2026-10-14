@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../../../core/l10n/app_localizations.dart';
+import '../../../core/providers/firebase_providers.dart';
 import '../../../core/providers/locale_provider.dart';
 import '../../../core/router/app_router.dart';
 import '../../../core/theme/app_colors.dart';
@@ -12,6 +14,8 @@ import '../../../core/utils/extensions.dart';
 import '../application/auth_controller.dart';
 import '../application/auth_state.dart';
 import '../../registration/application/registration_controller.dart';
+import '../../registration/data/registration_repository.dart';
+import '../../registration/domain/imam_model.dart';
 import 'widgets/apple_sign_in_button.dart';
 import 'widgets/auth_text_field.dart';
 import 'widgets/google_sign_in_button.dart';
@@ -116,7 +120,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
   }
 
   /// Shows the "هل لديك مسجد؟" bottom sheet before entering the registration flow.
-  void _showMosqueQuestionSheet() {
+  void _showMosqueQuestionSheet({ImamModel? existingImam}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -124,11 +128,88 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
       builder: (ctx) => _MosqueQuestionSheet(
         onAnswer: (hasMosque) {
           Navigator.of(ctx).pop();
-          ref.read(registrationControllerProvider.notifier).setHasMosque(hasMosque);
-          context.go(AppRoutes.registerImam);
+          final regNotifier = ref.read(registrationControllerProvider.notifier);
+          regNotifier.setHasMosque(hasMosque);
+
+          final user = ref.read(firebaseAuthProvider).currentUser;
+          final name = (existingImam != null && existingImam.fullName.isNotEmpty)
+              ? existingImam.fullName
+              : (user?.displayName ?? '');
+          final phone = existingImam?.phone ?? '';
+          final email = (existingImam != null && existingImam.email.isNotEmpty)
+              ? existingImam.email
+              : (user?.email ?? '');
+
+          regNotifier.setImamStep(
+            fullName: name,
+            phone: phone,
+            email: email,
+          );
+
+          if (user != null) {
+            // Already authenticated: go straight to the right step
+            if (hasMosque) {
+              context.go(AppRoutes.registerMosque);
+            } else {
+              context.go(AppRoutes.askFeatureSetup);
+            }
+          } else {
+            // Not authenticated yet: always go to imam registration screen
+            // which handles sign-in and then routes to mosque/ask-setup
+            context.go(AppRoutes.registerImam);
+          }
         },
       ),
     );
+  }
+
+  Future<void> _handleSocialSignInSuccess(User user) async {
+    final imam = await ref.read(registrationRepositoryProvider).getImam(user.uid);
+    if (!mounted) return;
+
+    if (imam != null && imam.mosqueId != null) {
+      context.go(AppRoutes.home);
+      return;
+    }
+
+    final currentHasMosque = ref.read(registrationControllerProvider).hasMosque;
+    if (currentHasMosque == true) {
+      final name = (imam != null && imam.fullName.isNotEmpty)
+          ? imam.fullName
+          : (user.displayName ?? '');
+      final phone = imam?.phone ?? '';
+      final email = (imam != null && imam.email.isNotEmpty)
+          ? imam.email
+          : (user.email ?? '');
+
+      ref.read(registrationControllerProvider.notifier).setImamStep(
+            fullName: name,
+            phone: phone,
+            email: email,
+          );
+      ref.read(registrationControllerProvider.notifier).setHasMosque(true);
+      context.go(AppRoutes.registerMosque);
+      return;
+    } else if (currentHasMosque == false) {
+      final name = (imam != null && imam.fullName.isNotEmpty)
+          ? imam.fullName
+          : (user.displayName ?? '');
+      final phone = imam?.phone ?? '';
+      final email = (imam != null && imam.email.isNotEmpty)
+          ? imam.email
+          : (user.email ?? '');
+
+      ref.read(registrationControllerProvider.notifier).setImamStep(
+            fullName: name,
+            phone: phone,
+            email: email,
+          );
+      ref.read(registrationControllerProvider.notifier).setHasMosque(false);
+      context.go(AppRoutes.askFeatureSetup);
+      return;
+    }
+
+    _showMosqueQuestionSheet(existingImam: imam);
   }
 
   Future<void> _signInWithGoogle() async {
@@ -141,6 +222,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         state.errorMessage ?? context.l10n.failedGoogleLogin,
         isError: true,
       );
+      return;
+    }
+    if (state.status == AuthStatus.authenticated && state.user != null) {
+      await _handleSocialSignInSuccess(state.user!);
     }
   }
 
@@ -154,6 +239,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen>
         state.errorMessage ?? context.l10n.failedAppleLogin,
         isError: true,
       );
+      return;
+    }
+    if (state.status == AuthStatus.authenticated && state.user != null) {
+      await _handleSocialSignInSuccess(state.user!);
     }
   }
 

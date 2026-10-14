@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/media_upload_provider.dart';
+import '../../../core/services/media_upload_service.dart';
 import 'post_model.dart';
 import 'comment_model.dart';
 import 'like_model.dart';
@@ -15,11 +17,14 @@ class PostsRepository {
   PostsRepository({
     required FirebaseFirestore firestore,
     required FirebaseStorage storage,
+    MediaUploadService? mediaUploadService,
   })  : _firestore = firestore,
-        _storage = storage;
+        _storage = storage,
+        _mediaUploadService = mediaUploadService ?? MediaUploadService();
 
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
+  final MediaUploadService _mediaUploadService;
 
   CollectionReference<Map<String, dynamic>> get _posts =>
       _firestore.collection('posts');
@@ -57,48 +62,18 @@ class PostsRepository {
     });
   }
 
-  /// Uploads media. Images go to Cloudinary (per user request); videos/docs go to Firebase Storage.
+  /// Uploads media to Media VPS server (primary and sole upload target).
   Future<String> uploadPostMedia({
     required File file,
     required String imamId,
     required String mediaType,
   }) async {
-    if (mediaType == 'image') {
-      final timestamp = (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
-      const uploadPreset = 'ml_default';
-      const apiKey = '469544593144925';
-      const apiSecret = 'KmhsBEK1uXT4lgbHI9WYh5ib7X8';
-
-      // Cloudinary signature parameters must be sorted alphabetically
-      final sortedParams = 'timestamp=$timestamp&upload_preset=$uploadPreset$apiSecret';
-      final signature = sha1.convert(utf8.encode(sortedParams)).toString();
-
-      final url = Uri.parse('https://api.cloudinary.com/v1_1/vbc9yur2/image/upload');
-      final request = http.MultipartRequest('POST', url)
-        ..fields['upload_preset'] = uploadPreset
-        ..fields['api_key'] = apiKey
-        ..fields['timestamp'] = timestamp
-        ..fields['signature'] = signature
-        ..files.add(await http.MultipartFile.fromPath('file', file.path));
-
-      final response = await request.send();
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final resBytes = await response.stream.toBytes();
-        final resString = String.fromCharCodes(resBytes);
-        final json = jsonDecode(resString);
-        return json['secure_url'] as String;
-      } else {
-        final resBytes = await response.stream.toBytes();
-        final resString = String.fromCharCodes(resBytes);
-        throw Exception('Cloudinary upload failed: ${response.statusCode} - $resString');
-      }
-    } else {
-      // Upload to Firebase Storage for video/file
-      final fileName = '${DateTime.now().millisecondsSinceEpoch}_${file.path.split(Platform.pathSeparator).last}';
-      final ref = _storage.ref().child('posts/$imamId/$fileName');
-      await ref.putFile(file);
-      return ref.getDownloadURL();
-    }
+    final uploaded = await _mediaUploadService.uploadFile(
+      file: file,
+      category: 'posts',
+      userId: imamId,
+    );
+    return uploaded.url;
   }
 
   /// Saves a new post to Firestore.
@@ -152,6 +127,7 @@ final postsRepositoryProvider = Provider<PostsRepository>((ref) {
   return PostsRepository(
     firestore: ref.watch(firestoreProvider),
     storage: ref.watch(firebaseStorageProvider),
+    mediaUploadService: ref.watch(mediaUploadServiceProvider),
   );
 });
 

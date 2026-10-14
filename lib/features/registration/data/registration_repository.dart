@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/media_upload_provider.dart';
+import '../../../core/services/media_upload_service.dart';
 import '../domain/imam_model.dart';
 import '../domain/imam_status.dart';
 import '../domain/mosque_model.dart';
@@ -13,9 +15,12 @@ import '../domain/mosque_model.dart';
 class RegistrationRepository {
   RegistrationRepository({
     required FirebaseFirestore firestore,
-  }) : _firestore = firestore;
+    MediaUploadService? mediaUploadService,
+  })  : _firestore = firestore,
+        _mediaUploadService = mediaUploadService ?? MediaUploadService();
 
   final FirebaseFirestore _firestore;
+  final MediaUploadService _mediaUploadService;
 
   CollectionReference<Map<String, dynamic>> get _imams =>
       _firestore.collection('imams');
@@ -69,40 +74,16 @@ class RegistrationRepository {
     required File file,
     required String path,
   }) async {
-    const cloudName = 'vbc9yur2';
-    const uploadPreset = 'ml_default';
+    final category = path.contains('mosque') || path.contains('verification')
+        ? 'attachments'
+        : 'profile';
 
-    final url = Uri.parse(
-      'https://api.cloudinary.com/v1_1/$cloudName/image/upload',
+    final uploaded = await _mediaUploadService.uploadFile(
+      file: file,
+      category: category,
     );
 
-    final request = http.MultipartRequest(
-      'POST',
-      url,
-    );
-
-    request.fields['upload_preset'] = uploadPreset;
-
-    request.files.add(
-      await http.MultipartFile.fromPath(
-        'file',
-        file.path,
-      ),
-    );
-
-    final response = await request.send();
-
-    final responseBody = await response.stream.bytesToString();
-
-    if (response.statusCode == 200 || response.statusCode == 201) {
-      final json = jsonDecode(responseBody);
-      return json['secure_url'];
-    }
-
-    throw Exception(
-      'Cloudinary upload failed: '
-      '${response.statusCode} - $responseBody',
-    );
+    return uploaded.url;
   }
 
   /// Creates an Imam profile with no mosque linked.
@@ -341,6 +322,7 @@ class RegistrationRepository {
 final registrationRepositoryProvider = Provider<RegistrationRepository>((ref) {
   return RegistrationRepository(
     firestore: ref.watch(firestoreProvider),
+    mediaUploadService: ref.watch(mediaUploadServiceProvider),
   );
 });
 

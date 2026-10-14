@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart' as intl;
@@ -114,6 +116,12 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
     final categories = ['درس', 'خطبة', 'إعلان', 'نشاط', 'تنبيه'];
     final formKey = GlobalKey<FormState>();
 
+    // Media editing state
+    final currentMediaUrls = List<String>.from(post.mediaUrls);
+    final newMediaFiles = <File>[];
+    final imagePicker = ImagePicker();
+    bool isSaving = false;
+
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -124,6 +132,70 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            final totalImages = currentMediaUrls.length + newMediaFiles.length;
+
+            Future<void> pickImages() async {
+              try {
+                final picked = await imagePicker.pickMultiImage();
+                if (picked.isNotEmpty) {
+                  setModalState(() {
+                    newMediaFiles.addAll(picked.map((x) => File(x.path)));
+                  });
+                }
+              } catch (e) {
+                _showSnackBar('${l10n.error}: $e');
+              }
+            }
+
+            Future<void> takePhoto() async {
+              try {
+                final picked = await imagePicker.pickImage(source: ImageSource.camera);
+                if (picked != null) {
+                  setModalState(() {
+                    newMediaFiles.add(File(picked.path));
+                  });
+                }
+              } catch (e) {
+                _showSnackBar('${l10n.error}: $e');
+              }
+            }
+
+            void showImageSourcePicker() {
+              showModalBottomSheet(
+                context: context,
+                shape: const RoundedRectangleBorder(
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                builder: (pickerCtx) {
+                  return SafeArea(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: Wrap(
+                        children: [
+                          ListTile(
+                            leading: const Icon(Icons.photo_library_rounded, color: Color(0xFF0F766E)),
+                            title: const Text('اختيار من المعرض (صور متعددة)'),
+                            onTap: () {
+                              Navigator.pop(pickerCtx);
+                              pickImages();
+                            },
+                          ),
+                          ListTile(
+                            leading: const Icon(Icons.camera_alt_rounded, color: Color(0xFF0F766E)),
+                            title: const Text('التقاط صورة بالكاميرا'),
+                            onTap: () {
+                              Navigator.pop(pickerCtx);
+                              takePhoto();
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            }
+
             return Padding(
               padding: EdgeInsets.only(
                 bottom: MediaQuery.of(context).viewInsets.bottom,
@@ -149,18 +221,33 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 16),
-                      Text(
-                        l10n.edit,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF111827),
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            l10n.edit,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF111827),
+                            ),
+                          ),
+                          if (isSaving)
+                            const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Color(0xFF0F766E),
+                              ),
+                            ),
+                        ],
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: textController,
                         maxLines: 5,
+                        enabled: !isSaving,
                         validator: (val) {
                           if (val == null || val.trim().isEmpty) {
                             return l10n.enterPostContent;
@@ -168,6 +255,7 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                           return null;
                         },
                         decoration: InputDecoration(
+                          hintText: l10n.enterPostContent,
                           border: OutlineInputBorder(
                             borderRadius: BorderRadius.circular(12),
                             borderSide: BorderSide(color: Colors.grey.shade300),
@@ -197,32 +285,299 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               color: isSelected ? Colors.white : Colors.black87,
                               fontWeight: FontWeight.bold,
                             ),
-                            onSelected: (selected) {
-                              if (selected) {
-                                setModalState(() {
-                                  selectedCategory = cat;
-                                });
-                              }
-                            },
+                            onSelected: isSaving
+                                ? null
+                                : (selected) {
+                                    if (selected) {
+                                      setModalState(() {
+                                        selectedCategory = cat;
+                                      });
+                                    }
+                                  },
                           );
                         }).toList(),
                       ),
+                      const SizedBox(height: 20),
+
+                      // Media Management Section
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'الصور المرفقة ($totalImages)',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF111827),
+                            ),
+                          ),
+                          TextButton.icon(
+                            onPressed: isSaving ? null : showImageSourcePicker,
+                            icon: const Icon(Icons.add_photo_alternate_rounded,
+                                size: 18, color: Color(0xFF0F766E)),
+                            label: const Text(
+                              'إضافة صور',
+                              style: TextStyle(
+                                color: Color(0xFF0F766E),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+
+                      if (totalImages == 0)
+                        InkWell(
+                          onTap: isSaving ? null : showImageSourcePicker,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Column(
+                              children: [
+                                Icon(Icons.add_photo_alternate_outlined,
+                                    size: 32, color: Colors.grey.shade400),
+                                const SizedBox(height: 6),
+                                Text(
+                                  'لا توجد صور. انقر لإضافة صور',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        SizedBox(
+                          height: 100,
+                          child: ListView(
+                            scrollDirection: Axis.horizontal,
+                            children: [
+                              // 1. Existing remote images
+                              for (int i = 0; i < currentMediaUrls.length; i++)
+                                Container(
+                                  width: 90,
+                                  height: 90,
+                                  margin: const EdgeInsets.only(left: 10),
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.network(
+                                            currentMediaUrls[i],
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (_, __, ___) => Container(
+                                              color: Colors.grey.shade200,
+                                              child: const Icon(Icons.broken_image,
+                                                  color: Colors.grey),
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (!isSaving)
+                                        Positioned(
+                                          top: 4,
+                                          right: 4,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setModalState(() {
+                                                currentMediaUrls.removeAt(i);
+                                              });
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.shade600,
+                                                shape: BoxShape.circle,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.2),
+                                                    blurRadius: 4,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.close_rounded,
+                                                size: 14,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+
+                              // 2. Newly picked local images
+                              for (int i = 0; i < newMediaFiles.length; i++)
+                                Container(
+                                  width: 90,
+                                  height: 90,
+                                  margin: const EdgeInsets.only(left: 10),
+                                  child: Stack(
+                                    children: [
+                                      Positioned.fill(
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.file(
+                                            newMediaFiles[i],
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        bottom: 4,
+                                        left: 4,
+                                        child: Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFF0F766E),
+                                            borderRadius: BorderRadius.circular(6),
+                                          ),
+                                          child: const Text(
+                                            'جديد',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 9,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                      if (!isSaving)
+                                        Positioned(
+                                          top: 4,
+                                          right: 4,
+                                          child: GestureDetector(
+                                            onTap: () {
+                                              setModalState(() {
+                                                newMediaFiles.removeAt(i);
+                                              });
+                                            },
+                                            child: Container(
+                                              padding: const EdgeInsets.all(4),
+                                              decoration: BoxDecoration(
+                                                color: Colors.red.shade600,
+                                                shape: BoxShape.circle,
+                                                boxShadow: [
+                                                  BoxShadow(
+                                                    color: Colors.black.withValues(alpha: 0.2),
+                                                    blurRadius: 4,
+                                                  ),
+                                                ],
+                                              ),
+                                              child: const Icon(
+                                                Icons.close_rounded,
+                                                size: 14,
+                                                color: Colors.white,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                    ],
+                                  ),
+                                ),
+
+                              // 3. Add more button
+                              if (!isSaving)
+                                GestureDetector(
+                                  onTap: showImageSourcePicker,
+                                  child: Container(
+                                    width: 90,
+                                    height: 90,
+                                    margin: const EdgeInsets.only(left: 10),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF9FAFB),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(
+                                          color: Colors.grey.shade300,
+                                          style: BorderStyle.solid),
+                                    ),
+                                    child: Column(
+                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      children: [
+                                        Icon(Icons.add_rounded,
+                                            color: Colors.grey.shade600, size: 28),
+                                        const SizedBox(height: 2),
+                                        Text(
+                                          'إضافة',
+                                          style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey.shade600,
+                                              fontWeight: FontWeight.bold),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          ),
+                        ),
+
                       const SizedBox(height: 24),
                       SizedBox(
                         width: double.infinity,
                         height: 50,
                         child: ElevatedButton(
-                          onPressed: () async {
-                            if (!formKey.currentState!.validate()) return;
-                            final updated = post.copyWith(
-                              text: textController.text.trim(),
-                              category: selectedCategory,
-                            );
-                            final navigator = Navigator.of(context);
-                            await ref.read(postsRepositoryProvider).updatePost(updated);
-                            navigator.pop();
-                            _showSnackBar(l10n.postUpdatedSuccessfully);
-                          },
+                          onPressed: isSaving
+                              ? null
+                              : () async {
+                                  if (!formKey.currentState!.validate()) return;
+                                  setModalState(() => isSaving = true);
+
+                                  try {
+                                    final uploadedUrls = <String>[];
+                                    final repo = ref.read(postsRepositoryProvider);
+
+                                    // Upload each new image to VPS
+                                    for (final file in newMediaFiles) {
+                                      final url = await repo.uploadPostMedia(
+                                        file: file,
+                                        imamId: post.imamId,
+                                        mediaType: 'image',
+                                      );
+                                      uploadedUrls.add(url);
+                                    }
+
+                                    final allMediaUrls = [
+                                      ...currentMediaUrls,
+                                      ...uploadedUrls,
+                                    ];
+
+                                    final newMediaType = allMediaUrls.isNotEmpty
+                                        ? (post.mediaType == 'none'
+                                            ? 'image'
+                                            : post.mediaType)
+                                        : 'none';
+
+                                    final updated = post.copyWith(
+                                      text: textController.text.trim(),
+                                      category: selectedCategory,
+                                      mediaUrls: allMediaUrls,
+                                      mediaType: newMediaType,
+                                    );
+
+                                    final navigator = Navigator.of(context);
+                                    await repo.updatePost(updated);
+                                    navigator.pop();
+                                    _showSnackBar(l10n.postUpdatedSuccessfully);
+                                  } catch (e) {
+                                    setModalState(() => isSaving = false);
+                                    _showSnackBar('${l10n.error}: $e');
+                                  }
+                                },
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF0F766E),
                             foregroundColor: Colors.white,
@@ -230,10 +585,31 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
-                          child: Text(
-                            l10n.saveChanges,
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
-                          ),
+                          child: isSaving
+                              ? const Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2,
+                                      ),
+                                    ),
+                                    SizedBox(width: 10),
+                                    Text(
+                                      'جاري حفظ التعديلات والرفع...',
+                                      style: TextStyle(
+                                          fontWeight: FontWeight.bold, fontSize: 14),
+                                    ),
+                                  ],
+                                )
+                              : Text(
+                                  l10n.saveChanges,
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.bold, fontSize: 15),
+                                ),
                         ),
                       ),
                       const SizedBox(height: 24),
@@ -516,14 +892,26 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
 
   Widget _buildMediaWidget(PostModel post, AppLocalizations l10n) {
     if (post.mediaType == 'image') {
-      return ClipRRect(
-        borderRadius: BorderRadius.circular(12),
-        child: Image.network(
-          post.mediaUrls.first,
-          width: double.infinity,
-          fit: BoxFit.cover,
-        ),
-      );
+      if (post.mediaUrls.length == 1) {
+        return ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Image.network(
+            post.mediaUrls.first,
+            width: double.infinity,
+            fit: BoxFit.cover,
+            errorBuilder: (_, __, ___) => Container(
+              height: 180,
+              color: Colors.grey.shade200,
+              child: const Center(
+                child: Icon(Icons.broken_image, color: Colors.grey, size: 36),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // Multi-image gallery carousel
+      return _MultiImageGallery(mediaUrls: post.mediaUrls);
     } else {
       // For video/file, render a premium action file tile
       final isVideo = post.mediaType == 'video';
@@ -909,6 +1297,102 @@ class _PostDetailScreenState extends ConsumerState<PostDetailScreen> {
           ),
         );
       },
+    );
+  }
+}
+
+
+class _MultiImageGallery extends StatefulWidget {
+  final List<String> mediaUrls;
+
+  const _MultiImageGallery({required this.mediaUrls});
+
+  @override
+  State<_MultiImageGallery> createState() => _MultiImageGalleryState();
+}
+
+class _MultiImageGalleryState extends State<_MultiImageGallery> {
+  int _currentIndex = 0;
+  final PageController _pageController = PageController();
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        SizedBox(
+          height: 250,
+          child: Stack(
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(14),
+                child: PageView.builder(
+                  controller: _pageController,
+                  itemCount: widget.mediaUrls.length,
+                  onPageChanged: (index) {
+                    setState(() => _currentIndex = index);
+                  },
+                  itemBuilder: (context, index) {
+                    return Image.network(
+                      widget.mediaUrls[index],
+                      width: double.infinity,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => Container(
+                        color: Colors.grey.shade200,
+                        child: const Center(
+                          child: Icon(Icons.broken_image, color: Colors.grey, size: 36),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+              Positioned(
+                bottom: 10,
+                right: 12,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withValues(alpha: 0.65),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${_currentIndex + 1} / ${widget.mediaUrls.length}',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(
+            widget.mediaUrls.length,
+            (i) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: _currentIndex == i ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: _currentIndex == i
+                    ? const Color(0xFF0F766E)
+                    : Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(3),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

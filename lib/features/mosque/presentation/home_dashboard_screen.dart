@@ -8,6 +8,7 @@ import '../../../core/l10n/app_localizations.dart';
 import '../../registration/data/registration_repository.dart';
 import '../../registration/domain/imam_model.dart';
 import '../../registration/domain/mosque_model.dart';
+import '../../registration/application/registration_controller.dart';
 import '../widgets/action_card.dart';
 import '../widgets/bottom_nav_bar.dart';
 import '../../posts/presentation/create_post_screen.dart';
@@ -88,7 +89,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
                         _buildMosqueProfileCard(mosque, l10n),
                         const SizedBox(height: 16),
                       ] else ...[
-                        _buildAddMosqueBanner(l10n),
+                        _buildAddMosqueBanner(imam, l10n),
                         const SizedBox(height: 16),
                       ],
 
@@ -207,7 +208,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
 
 
 
-  Widget _buildAddMosqueBanner(AppLocalizations l10n) {
+  Widget _buildAddMosqueBanner(ImamModel imam, AppLocalizations l10n) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(16),
@@ -228,11 +229,11 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
           Container(
             width: 48,
             height: 48,
-            decoration: BoxDecoration(
-              color: const Color(0xFFF3F4F6),
+            decoration: const BoxDecoration(
+              color: Color(0xFFF3F4F6),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.mosque_rounded, color: Color(0xFF9CA3AF), size: 24),
+            child: const Icon(Icons.mosque_rounded, color: Color(0xFF0F766E), size: 24),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -261,7 +262,13 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
           const SizedBox(width: 8),
           ElevatedButton(
             onPressed: () {
-              setState(() => _navIndex = 4); // Switch to Profile Tab
+              ref.read(registrationControllerProvider.notifier).setHasMosque(true);
+              ref.read(registrationControllerProvider.notifier).setImamStep(
+                    fullName: imam.fullName,
+                    phone: imam.phone,
+                    email: imam.email,
+                  );
+              context.go(AppRoutes.registerMosque);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0F766E),
@@ -272,7 +279,7 @@ class _HomeDashboardScreenState extends ConsumerState<HomeDashboardScreen> {
               elevation: 0,
             ),
             child: Text(
-              'الإعدادات',
+              l10n.registerMosque,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
             ),
           ),

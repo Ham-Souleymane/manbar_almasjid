@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/providers/firebase_providers.dart';
 import '../../features/auth/presentation/login_screen.dart';
 import '../../features/auth/presentation/splash_screen.dart';
+import '../../features/registration/application/registration_controller.dart';
 import '../../features/registration/data/registration_repository.dart';
 import '../../features/registration/domain/imam_status.dart';
 import '../../features/registration/presentation/ask_feature_setup_screen.dart';
@@ -29,94 +31,122 @@ abstract class AppRoutes {
   static const imamGroupChat = '/imam-forum/chat';
 }
 
+/// Notifier that triggers GoRouter redirect re-evaluation without
+/// disposing and recreating the GoRouter instance.
+class RouterRefreshNotifier extends ChangeNotifier {
+  RouterRefreshNotifier(Ref ref) {
+    ref.listen(authStateChangesProvider, (_, __) => notifyListeners());
+    ref.listen(currentImamProvider, (_, __) => notifyListeners());
+    ref.listen(isAdminProvider, (_, __) => notifyListeners());
+    ref.listen(registrationControllerProvider, (_, __) => notifyListeners());
+  }
+}
+
+final routerRefreshNotifierProvider = Provider<RouterRefreshNotifier>((ref) {
+  return RouterRefreshNotifier(ref);
+});
+
 // ── Router provider ───────────────────────────────────────────
 final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authStateChangesProvider);
-  final imamState = ref.watch(currentImamProvider);
-  final isAdminAsync = ref.watch(isAdminProvider);
+  final refreshNotifier = ref.watch(routerRefreshNotifierProvider);
 
   return GoRouter(
     initialLocation: AppRoutes.splash,
+    refreshListenable: refreshNotifier,
     debugLogDiagnostics: true,
     redirect: (context, state) {
       final location = state.matchedLocation;
 
-      if (authState.isLoading || imamState.isLoading || isAdminAsync.isLoading) {
-        if (location != AppRoutes.splash) return AppRoutes.splash;
-        return null;
-      }
-
-      final user = authState.asData?.value;
-      final isLoggedIn = user != null;
-      final isAdmin = isAdminAsync.asData?.value ?? false;
-      final imam = imamState.asData?.value;
-
-      const publicRoutes = {AppRoutes.splash, AppRoutes.login};
       const registrationRoutes = {
         AppRoutes.registerImam,
         AppRoutes.registerMosque,
         AppRoutes.askFeatureSetup,
       };
 
-      // Splash → resolve destination once auth + profile are loaded
-      if (location == AppRoutes.splash) {
-        if (!isLoggedIn) return AppRoutes.login;
-        if (isAdmin) return AppRoutes.home;
-        if (imam == null) return AppRoutes.registerImam;
-        if (imam.status == ImamStatus.blocked) {
-          return AppRoutes.underReview;
-        }
-        if (imam.status == ImamStatus.rejected) return AppRoutes.registerImam;
-        return AppRoutes.home;
-      }
+      final authState = ref.read(authStateChangesProvider);
+      final imamState = ref.read(currentImamProvider);
+      final isAdminAsync = ref.read(isAdminProvider);
+      final regState = ref.read(registrationControllerProvider);
 
-      if (!isLoggedIn) {
-        if (location == AppRoutes.registerImam) return null;
-        if (!publicRoutes.contains(location)) return AppRoutes.login;
+      // ── While auth is still initializing, stay on splash ──
+      if (authState.isLoading) {
+        if (location != AppRoutes.splash) return AppRoutes.splash;
         return null;
       }
 
-      // Admin bypasses all registration/under review checks and goes directly to home
+      final user = authState.asData?.value;
+      final isLoggedIn = user != null;
+
+      // ── Not logged in ──
+      if (!isLoggedIn) {
+        // Splash → login
+        if (location == AppRoutes.splash) return AppRoutes.login;
+        // Allow login page and all registration pages (email signup creates account mid-flow)
+        if (location == AppRoutes.login) return null;
+        if (registrationRoutes.contains(location)) return null;
+        // Anything else → login
+        return AppRoutes.login;
+      }
+
+      // ── Logged in: wait for imam profile + admin status ──
+      if (imamState.isLoading || isAdminAsync.isLoading) {
+        // Stay on splash or current registration screen while loading
+        if (location == AppRoutes.splash || registrationRoutes.contains(location)) {
+          return null;
+        }
+        return AppRoutes.splash;
+      }
+
+      final isAdmin = isAdminAsync.asData?.value ?? false;
+      final imam = imamState.asData?.value;
+
+      // ── Admin: always go home ──
       if (isAdmin) {
-        if (publicRoutes.contains(location) ||
-            registrationRoutes.contains(location) ||
+        if (location == AppRoutes.home) return null;
+        if (registrationRoutes.contains(location) ||
+            location == AppRoutes.login ||
+            location == AppRoutes.splash ||
             location == AppRoutes.underReview) {
           return AppRoutes.home;
         }
         return null;
       }
 
-      // Logged in — no imam profile yet → registration flow
+      // ── No imam profile yet (brand new user) ──
       if (imam == null) {
-        if (!registrationRoutes.contains(location)) return AppRoutes.registerImam;
-        return null;
+        if (registrationRoutes.contains(location)) return null;
+        if (location == AppRoutes.login) return null;
+        return AppRoutes.registerImam;
       }
 
-      // Blocked → under review screen
+      // ── Blocked imam ──
       if (imam.status == ImamStatus.blocked) {
-        if (location != AppRoutes.underReview) return AppRoutes.underReview;
-        return null;
+        if (location == AppRoutes.underReview) return null;
+        return AppRoutes.underReview;
       }
 
-      // Verified → home; rejected → allow re-registration
+      // ── Rejected imam → re-register ──
       if (imam.status == ImamStatus.rejected) {
-        if (!registrationRoutes.contains(location)) return AppRoutes.registerImam;
+        if (registrationRoutes.contains(location)) return null;
+        return AppRoutes.registerImam;
+      }
+
+      // ── Verified imam without mosque ──
+      if (imam.mosqueId == null) {
+        if (registrationRoutes.contains(location)) return null;
+        if (location == AppRoutes.login) return null;
+        // Splash → home (or mosque if mid-flow)
+        if (location == AppRoutes.splash) {
+          return regState.hasMosque == true ? AppRoutes.registerMosque : AppRoutes.home;
+        }
+        // Let them stay on home with the banner to register mosque
         return null;
       }
 
-      // Verified imam — allow mosque/ask-setup routes if they have no mosque
-      // (accessing from settings to add mosque later)
-      final verifiedMosqueRoutes = {
-        AppRoutes.registerMosque,
-        AppRoutes.askFeatureSetup,
-      };
-      if (imam.mosqueId == null &&
-          (verifiedMosqueRoutes.contains(location) ||
-              location == AppRoutes.registerImam)) {
-        return null; // let them through
-      }
-
-      if (publicRoutes.contains(location) ||
+      // ── Fully registered imam with mosque ──
+      // Kick them off any auth/registration screen back to home
+      if (location == AppRoutes.splash ||
+          location == AppRoutes.login ||
           registrationRoutes.contains(location) ||
           location == AppRoutes.underReview) {
         return AppRoutes.home;

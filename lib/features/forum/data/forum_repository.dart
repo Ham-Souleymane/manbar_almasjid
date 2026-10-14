@@ -8,6 +8,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 
 import '../../../core/providers/firebase_providers.dart';
+import '../../../core/providers/media_upload_provider.dart';
+import '../../../core/services/media_upload_service.dart';
 import '../domain/forum_message_model.dart';
 import '../domain/imam_group_model.dart';
 
@@ -15,6 +17,7 @@ final forumRepositoryProvider = Provider<ForumRepository>((ref) {
   return ForumRepository(
     firestore: ref.watch(firestoreProvider),
     storage: ref.watch(firebaseStorageProvider),
+    mediaUploadService: ref.watch(mediaUploadServiceProvider),
   );
 });
 
@@ -22,11 +25,14 @@ class ForumRepository {
   ForumRepository({
     required FirebaseFirestore firestore,
     required FirebaseStorage storage,
+    MediaUploadService? mediaUploadService,
   })  : _firestore = firestore,
-        _storage = storage;
+        _storage = storage,
+        _mediaUploadService = mediaUploadService ?? MediaUploadService();
 
   final FirebaseFirestore _firestore;
   final FirebaseStorage _storage;
+  final MediaUploadService _mediaUploadService;
 
   CollectionReference<Map<String, dynamic>> get _groups =>
       _firestore.collection('imam_groups');
@@ -354,47 +360,17 @@ class ForumRepository {
     await docRef.update({'reactions': reactions});
   }
 
-  /// Upload chat media image (using Cloudinary or Firebase Storage).
+  /// Upload chat media image (using isolated Media VPS server).
   Future<String> uploadChatMedia({
     required File file,
     required String imamId,
   }) async {
-    try {
-      final timestamp =
-          (DateTime.now().millisecondsSinceEpoch ~/ 1000).toString();
-      const uploadPreset = 'ml_default';
-      const apiKey = '469544593144925';
-      const apiSecret = 'KmhsBEK1uXT4lgbHI9WYh5ib7X8';
-
-      final sortedParams =
-          'timestamp=$timestamp&upload_preset=$uploadPreset$apiSecret';
-      final signature = sha1.convert(utf8.encode(sortedParams)).toString();
-
-      final url =
-          Uri.parse('https://api.cloudinary.com/v1_1/vbc9yur2/image/upload');
-      final request = http.MultipartRequest('POST', url)
-        ..fields['upload_preset'] = uploadPreset
-        ..fields['api_key'] = apiKey
-        ..fields['timestamp'] = timestamp
-        ..fields['signature'] = signature
-        ..files.add(await http.MultipartFile.fromPath('file', file.path));
-
-      final response = await request.send();
-      if (response.statusCode == 200 || response.statusCode == 201) {
-        final resBytes = await response.stream.toBytes();
-        final resString = String.fromCharCodes(resBytes);
-        final json = jsonDecode(resString);
-        return json['secure_url'] as String;
-      }
-    } catch (_) {
-      // Fallback to Firebase storage if Cloudinary fails
-    }
-
-    final fileName =
-        '${DateTime.now().millisecondsSinceEpoch}_${file.path.split(Platform.pathSeparator).last}';
-    final ref = _storage.ref().child('forum_chats/$imamId/$fileName');
-    await ref.putFile(file);
-    return ref.getDownloadURL();
+    final uploaded = await _mediaUploadService.uploadFile(
+      file: file,
+      category: 'chat',
+      userId: imamId,
+    );
+    return uploaded.url;
   }
 
   /// Seeds default specialized religious groups if the collection is empty.
